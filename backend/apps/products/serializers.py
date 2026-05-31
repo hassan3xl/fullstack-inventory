@@ -8,7 +8,6 @@ from .models import (
     ProductInventory,
     StockBatch,
 )
-from django.db.models import Avg
 
 
 # Existing serializers from controllers/store/products

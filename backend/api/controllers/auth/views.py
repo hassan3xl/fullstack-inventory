@@ -1,12 +1,9 @@
 # pyright: reportUnreachable=false
 
 
-from rest_framework import generics, permissions
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from rest_framework import status
-from .serializers import CustomRegisterSerializer, LoginSerializer
 from rest_framework.views import APIView
 # from users.utils.send_otp import send_otp_email
 # from users.models import OTPRequest

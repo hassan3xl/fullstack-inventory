@@ -4,7 +4,7 @@ from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.tenants.models import Tenant, TenantUser
 from apps.tenants.serializers import TenantSerializer, TenantDashboardSerializer
-from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantAdmin, IsTenantOwner
+from apps.tenants.permissions.tenant_roles import HasTenantAccess
 from django.contrib.auth import get_user_model
 from utils.resend import EmailSender
 import string

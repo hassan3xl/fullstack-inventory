@@ -1,7 +1,7 @@
 import uuid
 import random
 import string
-from django.db import models, transaction
+from django.db import models
 from django.utils import timezone
 from django.conf import settings
 # pyrefly: ignore [missing-import]

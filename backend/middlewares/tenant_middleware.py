@@ -1,4 +1,3 @@
-from django.shortcuts import get_object_or_404
 from apps.tenants.models import Tenant, TenantUser
 from utils.tenant_context import set_current_tenant, clear_current_tenant
 from utils.subdomain_handler import subdomain_handler

@@ -1,7 +1,4 @@
 from django.db import models
-from django.utils import timezone
-from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 import uuid
 from cloudinary.models import CloudinaryField
 from .users import User

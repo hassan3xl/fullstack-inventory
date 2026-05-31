@@ -54,7 +54,7 @@ def tenant_list_view(request):
                     EmailSender.send_notification(
                         to=admin_email,
                         name=first_name if first_name else user_name,
-                        title=f"Your Quantum Stack Admin Account",
+                        title="Your Quantum Stack Admin Account",
                         message=f"Welcome to {name}! Your admin account has been created.<br><br>"
                                 f"<strong>Login Details:</strong><br>"
                                 f"Email: {admin_email}<br>"

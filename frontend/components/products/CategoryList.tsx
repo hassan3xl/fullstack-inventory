@@ -17,15 +17,6 @@ const CategoryList: React.FC<CategoryListProps> = ({ category, onClick }) => {
       {/* Mobile Layout: Slip Card (horizontal) */}
       <div className="flex sm:hidden items-center justify-between p-3.5 bg-card border border-border/80 rounded-xl shadow-xs hover:shadow-md hover:border-primary/20 active:scale-[0.99] transition-all duration-200 gap-3.5">
         <div className="flex items-center gap-3">
-          <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-muted border border-border/40">
-            <Image
-              src={category?.image || "/default_product.png"}
-              alt={category?.name}
-              fill
-              sizes="56px"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
               {category.name}
@@ -41,18 +32,14 @@ const CategoryList: React.FC<CategoryListProps> = ({ category, onClick }) => {
               )}
           </div>
         </div>
-        <ChevronRight size={16} className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+        <ChevronRight
+          size={16}
+          className="text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+        />
       </div>
 
       {/* Tablet & Desktop Layout: Grid Card */}
-      <div className="hidden sm:block relative aspect-square overflow-hidden rounded-xl border border-border/80 shadow-xs hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-card">
-        <Image
-          src={category?.image || "/default_product.png"}
-          alt={category?.name}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-110"
-        />
+      <div className="hidden relative w-55 h-20 sm:block overflow-hidden rounded-xl border border-border/80 shadow-xs hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-card">
         {/* Overlay */}
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-all duration-300 flex flex-col justify-end p-4">
           {category.expiry_strategy &&

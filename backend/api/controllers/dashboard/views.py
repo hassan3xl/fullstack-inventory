@@ -2,9 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
-from apps.tenants.models import Tenant, TenantUser
+from apps.tenants.models import TenantUser
 from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantAdmin, IsTenantManager
-from apps.tenants.serializers import TenantSerializer, TenantDashboardSerializer
+from apps.tenants.serializers import TenantSerializer
 from utils.resend import EmailSender
 
 class BusinessProfileAPIView(APIView):
@@ -143,7 +143,8 @@ class StaffAddAPIView(APIView):
                 )
 
                 if created:
-                    import string, random
+                    import string
+                    import random
                     password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
                     user.set_password(password)
                     user.save()

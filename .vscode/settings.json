@@ -1,15 +1,16 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/python",
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}/backend"
-    ],
-    "files.associations": {
-        "**/backend/**/*.html": "django-html"
-    },
-    "[django-html]": {
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "JaaJYT.djlint"
-    },
-    "djlint.pythonPath": "${workspaceFolder}/backend/venv/bin/python",
-    "djlint.executablePath": "${workspaceFolder}/backend/venv/bin/djlint"
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+  "files.associations": {
+    "**/backend/**/*.html": "django-html"
+  },
+  "[django-html]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "JaaJYT.djlint"
+  },
+  "djlint.pythonPath": "${workspaceFolder}/backend/venv/bin/python",
+  "djlint.executablePath": "${workspaceFolder}/backend/venv/bin/djlint",
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.linting.enabled": true
 }

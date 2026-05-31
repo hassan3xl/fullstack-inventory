@@ -1,4 +1,4 @@
-from rest_framework import viewsets, generics
+from rest_framework import viewsets
 from apps.products.models import Product, Category, StockBatch
 from apps.products.api import (
     ProductCategorySerializer,
@@ -10,16 +10,14 @@ from apps.products.api import (
 from apps.products.models import ProductImage
 
 # from ..config.permissions import IsMerchantUser, IsActiveVerifiedMerchant
-from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantAdmin, IsTenantManager, IsTenantStaff
+from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantManager
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions, viewsets
+from rest_framework import status
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import action
 
-from rest_framework import viewsets, generics
-from rest_framework.permissions import AllowAny
 from django.db.models import Sum, F, Q
 from django.utils import timezone
 
@@ -87,7 +85,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
         tenant = getattr(self.request, 'tenant', None)
         business_type = tenant.business_type if tenant else 'general'
         name = serializer.validated_data.get('name')
-        from django.db.models import Q
         if Category.plain_objects.filter(
             Q(tenant=tenant) | Q(tenant__isnull=True),
             name__iexact=name

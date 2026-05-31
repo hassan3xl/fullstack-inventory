@@ -1,6 +1,6 @@
 import resend
 from src.config import RESEND_API_KEY
-from typing import List, Dict, Optional
+from typing import List, Dict
 from enum import Enum
 
 resend.api_key = RESEND_API_KEY

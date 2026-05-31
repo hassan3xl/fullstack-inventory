@@ -1,6 +1,6 @@
 # utils/notification_utils.py
 from django.contrib.auth.models import User
-from typing import List, Dict, Any, Optional
+from typing import List, Any, Optional
 from ..services.notification_service import NotificationService
 
 def notify_user(

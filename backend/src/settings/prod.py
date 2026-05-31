@@ -2,17 +2,15 @@ from .base import *
 import os
 import dj_database_url
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from src.config import (
-    PRODUCTION_DB,
     SECRET_KEY,
     ALLOWED_HOSTS,
-    DEBUG,
     CORS_ALLOWED_ORIGINS,
     RESEND_API_KEY
 )
+
+load_dotenv()
+
 
 SECRET_KEY = SECRET_KEY
 DEBUG = True
@@ -35,26 +33,46 @@ CACHES = {
 }
 
 LOGGING = {
-    "version": 1,
-    "handlers": {
-        "console": {"class": "logging.StreamHandler"},
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "DEBUG",
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # captures every request + errors
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # set to DEBUG to see every SQL query
+            'propagate': False,
+        },
     },
 }
 
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
-
-if "whitenoise.middleware.WhiteNoiseMiddleware" not in MIDDLEWARE:
-    try:
-        idx = MIDDLEWARE.index("django.middleware.security.SecurityMiddleware")
-        MIDDLEWARE.insert(idx + 1, "whitenoise.middleware.WhiteNoiseMiddleware")
-    except ValueError:
-        MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

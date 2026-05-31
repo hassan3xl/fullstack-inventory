@@ -3,7 +3,6 @@ Notification triggers for common events in the system.
 These can be imported and used in views/signals when events occur.
 """
 
-from typing import Optional
 from django.contrib.auth import get_user_model
 from apps.notifications.services import NotificationService
 from apps.notifications.models import NotificationChannel
@@ -183,7 +182,7 @@ class NotificationTriggers:
             user=user,
             title="🔐 Password Changed",
             message="Your password has been successfully changed. "
-                   f"If you didn't make this change, please reset your password immediately.",
+                   "If you didn't make this change, please reset your password immediately.",
             category="password_changed",
             channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
         )
@@ -235,7 +234,7 @@ class NotificationTriggers:
     @staticmethod
     def on_daily_summary(tenant, summary_data: dict):
         """Send daily summary notification"""
-        message = f"<strong>Daily Summary</strong><br>"
+        message = "<strong>Daily Summary</strong><br>"
         message += f"Total Sales: ₦{summary_data.get('total_sales', 0):,.2f}<br>"
         message += f"Orders: {summary_data.get('orders_count', 0)}<br>"
         message += f"New Products: {summary_data.get('new_products', 0)}"

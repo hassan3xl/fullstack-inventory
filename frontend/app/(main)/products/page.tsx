@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 import Loading from "@/components/Loader";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
 
-const ProductsInventoryClient: React.FC = () => {
+const ProductsInventory: React.FC = () => {
   const { data: products, refetch, isLoading } = useGetProducts();
   const { config } = useBusinessConfig();
   const showExpiry = config.features.expiryTracking;
@@ -125,11 +125,11 @@ const ProductsInventoryClient: React.FC = () => {
   const handleProductUpdate = () => {
     refetch();
   };
-  if (isLoading) return <Loading />
+  if (isLoading) return <Loading />;
   if (!products) return null;
 
   return (
-    <>
+    <div className="space-y-8 pb-12">
       <ProductForm
         isModalOpen={isModalOpen}
         closeModal={() => setIsModalOpen(false)}
@@ -209,9 +209,7 @@ const ProductsInventoryClient: React.FC = () => {
               <option value="in-stock">Available Items</option>
               <option value="low-stock">Critical Levels</option>
               <option value="out-of-stock">Depleted Stock</option>
-              {showExpiry && (
-                <option value="expiring">Expiring Soon</option>
-              )}
+              {showExpiry && <option value="expiring">Expiring Soon</option>}
             </select>
 
             <select
@@ -245,8 +243,8 @@ const ProductsInventoryClient: React.FC = () => {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 };
 
-export default ProductsInventoryClient;
+export default ProductsInventory;

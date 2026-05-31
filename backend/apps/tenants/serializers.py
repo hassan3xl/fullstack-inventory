@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Tenant, TenantUser
+from .models import Tenant
 
 class TenantSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()

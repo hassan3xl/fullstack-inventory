@@ -1,15 +1,12 @@
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-import dj_database_url
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
-from decouple import config
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-import sys
 
 load_dotenv()
 

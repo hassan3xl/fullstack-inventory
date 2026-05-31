@@ -1,10 +1,7 @@
 # services/notification_service.py
-from django.core.mail import send_mail
-from django.utils.html import strip_tags
-from django.conf import settings
 from django.contrib.auth import get_user_model
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from .models import Notification, NotificationChannel, UserNotificationPreference
 from utils.resend import EmailSender
 
@@ -134,7 +131,6 @@ class NotificationService:
         **kwargs,
     ) -> Dict[str, int]:
         """Send notification to all users in a tenant"""
-        from apps.tenants.models import TenantUser
         
         users = User.objects.filter(
             tenant_roles__tenant=tenant

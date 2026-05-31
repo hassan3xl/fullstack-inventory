@@ -1,7 +1,6 @@
 # models.py
 from django.db import models
 from django.utils import timezone
-from django.core.serializers.json import DjangoJSONEncoder
 
 class NotificationChannel(models.TextChoices):
     IN_APP = 'in_app', 'In App'

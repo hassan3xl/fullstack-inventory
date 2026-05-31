@@ -97,9 +97,8 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   const addMutation = useAddCategory();
   const editMutation = useEditCategory();
   const deleteMutation = useDeleteCategory();
-  const { data: queriedCategory, isLoading: categoryLoading } = useGetCategoryDetail(
-    category ? "" : (categoryName ?? "")
-  );
+  const { data: queriedCategory, isLoading: categoryLoading } =
+    useGetCategoryDetail(category ? "" : (categoryName ?? ""));
 
   const activeCategory = category || queriedCategory;
   const isLoadingActive = !category && categoryLoading;
@@ -170,11 +169,11 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
     formData.append("description", data.description || "");
     formData.append(
       "default_best_before_days",
-      showExpirySection ? String(data.default_best_before_days || 0) : "0"
+      showExpirySection ? String(data.default_best_before_days || 0) : "0",
     );
     formData.append(
       "expiry_strategy",
-      showExpirySection ? data.expiry_strategy : "GENERAL"
+      showExpirySection ? data.expiry_strategy : "GENERAL",
     );
     if (selectedFile) {
       formData.append("image", selectedFile);
@@ -188,7 +187,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
         closeModal();
       } catch (error: any) {
         toast.error(
-          error?.name?.[0] || error?.detail || "Failed to update category."
+          error?.name?.[0] || error?.detail || "Failed to update category.",
         );
       }
     } else {
@@ -199,7 +198,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
         closeModal();
       } catch (error: any) {
         toast.error(
-          error?.name?.[0] || error?.detail || "Failed to create category."
+          error?.name?.[0] || error?.detail || "Failed to create category.",
         );
       }
     }
@@ -217,7 +216,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
       router.push("/categories");
     } catch (error: any) {
       toast.error(
-        error?.detail || error?.message || "Failed to delete category."
+        error?.detail || error?.message || "Failed to delete category.",
       );
     }
   };
@@ -269,55 +268,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
             <h4 className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-wider">
               <Tag size={16} /> Basic Information
             </h4>
-
-            {/* Image Upload Field */}
-            {!isGlobal && (
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-foreground">Category Image</label>
-                <div className="flex items-center gap-4">
-                  {imagePreview ? (
-                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-border group bg-muted">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedFile(null);
-                          setImagePreview(null);
-                        }}
-                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-200 cursor-pointer"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center w-20 h-20 rounded-lg border border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer bg-muted/40">
-                      <Upload size={16} className="text-muted-foreground" />
-                      <span className="text-[10px] text-muted-foreground mt-1">Upload</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setSelectedFile(file);
-                            setImagePreview(URL.createObjectURL(file));
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                  <div className="text-xs text-muted-foreground">
-                    <p className="font-semibold text-foreground">Upload a category picture</p>
-                    <p>PNG, JPG up to 5MB</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <Input
               name="name"
@@ -422,8 +372,8 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
                       ? "Updating..."
                       : "Creating..."
                     : isEditMode
-                    ? "Save Changes"
-                    : "Create Category"}
+                      ? "Save Changes"
+                      : "Create Category"}
                 </Button>
               )}
             </div>

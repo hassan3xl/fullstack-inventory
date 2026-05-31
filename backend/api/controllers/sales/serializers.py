@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
-from apps.products.models import Product, StockBatch
+from apps.products.models import Product
 from apps.sales.models import Sale, SaleItem, Customer
 
 class CustomerSerializer(serializers.ModelSerializer):

@@ -1,4 +1,4 @@
-import { getAccessToken } from "../actions/auth.actions";
+import { getAccessToken, resetAuthCookies } from "../actions/auth.actions";
 
 // development
 export const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -43,6 +43,33 @@ async function fetchWithCatch(
     }
 
     if (!response.ok) {
+      // Check if token is invalid or expired
+      if (
+        response.status === 401 ||
+        (data && data.code === "token_not_valid")
+      ) {
+        if (typeof window !== "undefined") {
+          // Clear client-side cookies
+          document.cookie = "session_user=; max-age=0; path=/;";
+          document.cookie = "session_access_token=; max-age=0; path=/;";
+
+          // Reset server cookies
+          resetAuthCookies().catch((err) => {
+            console.error("Failed to reset auth cookies on server", err);
+          });
+
+          // Redirect to login if on a protected route
+          const currentPath = window.location.pathname;
+          if (
+            currentPath !== "/login" &&
+            currentPath !== "/register" &&
+            !currentPath.startsWith("/reset-password")
+          ) {
+            window.location.href = "/login";
+          }
+        }
+      }
+
       // If error, throw data so caller .catch gets it
       throw data || { detail: response.statusText };
     }

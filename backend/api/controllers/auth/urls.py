@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import GoogleLogin, RequestOTPView, VerifyOTPView, ResetPasswordView, TenantLoginView
 from .user_view import AuthenticatedUserView
-from django.urls import path, include
+from django.urls import include
 from django.views.generic import TemplateView
 from rest_framework_simplejwt.views import TokenVerifyView, TokenRefreshView
 
