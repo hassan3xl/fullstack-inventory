@@ -22,6 +22,7 @@ LOCAL_DB = os.getenv("LOCAL_DB")
 SQLITE_DB = os.getenv("SQLITE_DB")
 DOCKER_DB = os.getenv("DOCKER_DB")
 PRODUCTION_DB = os.getenv("PRODUCTION_DB")
+DEVELOPMENT_DB = os.getenv("DEVELOPMENT_DB")
 
 # 5. Core Application Settings
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-in-production")

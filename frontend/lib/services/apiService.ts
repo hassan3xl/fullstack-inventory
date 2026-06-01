@@ -7,21 +7,7 @@ export const sendMessageEndpoint = process.env.NEXT_PUBLIC_BACKEND_MESSAGE_URL;
 // productiont
 // const BASE_URL = process.env.NEXT_PUBLIC_PRODUCTION_API_URL;
 
-// Helper to get tenant slug from subdomain
-const getTenantSlug = () => {
-  if (typeof window === "undefined") return null;
-  const host = window.location.host;
-  const parts = host.split(".");
-  // For dev: subdomain.localhost:3000 -> ["subdomain", "localhost:3000"]
-  // For prod: subdomain.myapp.com -> ["subdomain", "myapp", "com"]
-  if (
-    parts.length >= 2 &&
-    (parts[1].includes("localhost") || parts.length > 2)
-  ) {
-    return parts[0];
-  }
-  return null;
-};
+
 
 async function fetchWithCatch(
   url: string,

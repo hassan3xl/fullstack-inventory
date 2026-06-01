@@ -63,7 +63,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
        * and centres the panel on larger screens via padding trick.
        */}
       <div
-        className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+        className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overflow-x-hidden"
         /* Clicking the gutters (not the panel) closes the modal */
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
@@ -74,7 +74,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
          * On mobile: full height, full width, no rounding at top.
          * On sm+: auto height, rounded, max-height safety cap so
          *         very long forms still scroll internally.
-         */}
+         * */}
         <div
           className={`
             relative w-full bg-card flex flex-col
@@ -115,7 +115,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
           )}
 
           {/* ── Scrollable Body ────────────────────────────────── */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
             {children}
           </div>
 

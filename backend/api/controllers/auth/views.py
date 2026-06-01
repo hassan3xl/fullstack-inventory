@@ -74,7 +74,6 @@ class TenantLoginView(LoginView):
                 {
                     'id': str(tu.tenant.id),
                     'name': tu.tenant.name,
-                    'subdomain': tu.tenant.subdomain,
                     'role': tu.role,
                     'role_display': tu.get_role_display(),
                 }

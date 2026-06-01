@@ -211,6 +211,10 @@ const AccountPage = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleProfileSubmit} className="space-y-6">
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium">
+                      First name and Last name can only be modified by a store administrator or owner.
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
@@ -221,7 +225,8 @@ const AccountPage = () => {
                           value={profileData.first_name}
                           onChange={handleProfileChange}
                           placeholder="First Name"
-                          className="rounded-xl"
+                          disabled={true}
+                          className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
                         />
                       </div>
                       <div className="space-y-2">
@@ -233,20 +238,38 @@ const AccountPage = () => {
                           value={profileData.last_name}
                           onChange={handleProfileChange}
                           placeholder="Last Name"
-                          className="rounded-xl"
+                          disabled={true}
+                          className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                        Email Address (Read-only)
-                      </label>
-                      <NormalInput
-                        value={user?.email || ""}
-                        disabled
-                        className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                          Email Address (Read-only)
+                        </label>
+                        <NormalInput
+                          value={user?.email || ""}
+                          disabled
+                          className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                          Access Role (Read-only)
+                        </label>
+                        <NormalInput
+                          value={
+                            user?.permissions?.store_role
+                              ? user.permissions.store_role.charAt(0).toUpperCase() +
+                                user.permissions.store_role.slice(1)
+                              : "No Role"
+                          }
+                          disabled
+                          className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">

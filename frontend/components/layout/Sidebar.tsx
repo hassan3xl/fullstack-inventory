@@ -35,14 +35,14 @@ export default function Sidebar() {
 
   // Role/Permission-based guards
   const permissions = user?.permissions;
-  const isPlatformAdmin =
-    user?.role === "platform_admin" || permissions?.is_platform_admin;
-  const canViewCategories = isPlatformAdmin || permissions?.is_manager;
+  const isBusinessAdmin = user?.role === "is_owner" || permissions?.is_admin;
+
+  const canViewCategories = isBusinessAdmin || permissions?.is_manager;
   const canViewStaff =
-    isPlatformAdmin || permissions?.is_admin || permissions?.is_owner;
+    isBusinessAdmin || permissions?.is_admin || permissions?.is_owner;
   const canViewSettings =
-    isPlatformAdmin || permissions?.is_admin || permissions?.is_owner;
-  const canViewPOS = isPlatformAdmin || permissions?.is_cashier;
+    isBusinessAdmin || permissions?.is_admin || permissions?.is_owner;
+  const canViewPOS = isBusinessAdmin || permissions?.is_cashier;
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -150,40 +150,6 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* Stock Operations */}
-          {/* <div>
-            <p className="px-4 text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">
-              Stock Operations
-            </p>
-            <div className="space-y-1">
-              <Link
-                href="/products?filter=low-stock"
-                onClick={closeSidebar}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-amber-500/10 text-foreground transition-all duration-300 group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all">
-                  <Tag size={14} />
-                </div>
-                <span className="font-bold text-sm tracking-tight">
-                  Critical Stock
-                </span>
-              </Link>
-
-              <Link
-                href="/products?filter=expiring"
-                onClick={closeSidebar}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-500/10 text-foreground transition-all duration-300 group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
-                  <Star size={14} />
-                </div>
-                <span className="font-bold text-sm tracking-tight">
-                  Expiring Lots
-                </span>
-              </Link>
-            </div>
-          </div> */}
-
           {/* POS & Checkout */}
           {canViewPOS && (
             <div>
@@ -243,20 +209,22 @@ export default function Sidebar() {
                   Customers
                 </span>
               </Link>
-              <Link
-                href="/finance"
-                onClick={closeSidebar}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                  isActive("/finance")
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "hover:bg-accent/50 text-foreground"
-                }`}
-              >
-                <TrendingUp size={18} />
-                <span className="font-bold text-sm tracking-tight">
-                  Finance Details
-                </span>
-              </Link>
+              {isBusinessAdmin && (
+                <Link
+                  href="/finance"
+                  onClick={closeSidebar}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                    isActive("/finance")
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "hover:bg-accent/50 text-foreground"
+                  }`}
+                >
+                  <TrendingUp size={18} />
+                  <span className="font-bold text-sm tracking-tight">
+                    Finance
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -265,13 +233,17 @@ export default function Sidebar() {
             <div className="space-y-1">
               {canViewSettings && (
                 <Link
-                  href="/store"
+                  href="/settings"
                   onClick={closeSidebar}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent/50 text-muted-foreground transition-all duration-300"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                    isActive("/settings")
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                  }`}
                 >
                   <Settings size={18} />
                   <span className="font-bold text-sm tracking-tight">
-                    System Settings
+                    Settings
                   </span>
                 </Link>
               )}

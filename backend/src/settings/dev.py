@@ -1,4 +1,5 @@
 from dj_database_url import parse
+import dj_database_url
 import socket
 from .base import *
 import os
@@ -12,8 +13,10 @@ INTERNAL_IPS = [ip[:-1] + "1" for ip in ips] + ["127.0.0.1"]
 from src.config import (
     ALLOWED_ORIGINS, 
     ALLOWED_HOSTS, 
-    SECRET_KEY as CONFIG_SECRET_KEY
+    SECRET_KEY as CONFIG_SECRET_KEY,
     PRODUCTION_DB,
+    DEVELOPMENT_DB,
+    RESEND_API_KEY
 )
 
 # Use config values (SECRET_KEY from base is a default, override with env if needed)
@@ -23,8 +26,8 @@ ALLOWED_ORIGINS = ALLOWED_ORIGINS
 
 db_url = (
     os.environ.get("DATABASE_URL")
-    or os.environ.get("DOCKER_DB")
-    or os.environ.get("LOCAL_DB")
+    or os.environ.get("DOCKER_DB") # docker db inside docker venv
+    or os.environ.get("LOCAL_DB") # docker db on localhost
     or os.environ.get("PRODUCTION_DB")  
     or os.environ.get("SQLITE_DB")
     or "sqlite:///db.sqlite3"
@@ -37,7 +40,7 @@ if db_url and "neon.tech" in db_url:
 DATABASES = {
     "default": dj_database_url.config(
         # default=db_url,
-        default=os.environ.get("PRODUCTION_DB"),
+        default=os.environ.get("LOCAL_DB"),
         conn_max_age=600,
         ssl_require=ssl_require,
     )
@@ -66,10 +69,10 @@ STORAGES = {
 #     }
 # }
 
-from src.config import RESEND_API_KEY
-import os
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.resend.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True

@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 // ── Capability pill ──────────────────────────────────────────────────────
 const CapabilityPill = ({
   label,
@@ -80,6 +82,8 @@ const InfoRow = ({
 
 // ════════════════════════════════════════════════════════════════════════
 export default function StoreSettingsPage() {
+  const { user } = useAuth();
+  const isOwner = user?.permissions?.is_owner;
   const { data: store, isLoading } = useGetStore();
   const { config } = useBusinessConfig();
 
@@ -181,42 +185,10 @@ export default function StoreSettingsPage() {
   return (
     <div className="space-y-4">
 
-      {/* ── Top Header / Responsive Action Row ────────────────────────── */}
-        <Header title="Store Profile" subtitle="Manage your business profile, details, and settings." 
-        actions={
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 font-bold text-xs sm:text-sm h-10 px-4 rounded-xl cursor-pointer bg-background hover:bg-muted shrink-0"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={updateLogoMutation.isPending}
-            >
-              <Camera className="w-4 h-4 text-primary" />
-              {updateLogoMutation.isPending ? "Uploading…" : "Upload Picture"}
-            </Button>
-            <Button
-              className="flex items-center gap-2 font-bold text-xs sm:text-sm h-10 px-4 rounded-xl cursor-pointer shrink-0"
-              onClick={() => setIsEditingName(true)}
-              disabled={isEditingName}
-            >
-              <Edit3 className="w-4 h-4" />
-              Rename Store
-            </Button>
-          </div>
-        }
-        />
-        
+      {/* ── Top Header ───────────────────────────────────────────────── */}
+      <Header title="Store Profile" subtitle="View your business profile and current configurations." />
 
-      {/* Hidden file input for logo upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleLogoChange}
-      />
-
-      {/* ── Hero Banner with Logo & Editable Store Name ───────────────── */}
+      {/* ── Hero Banner with Logo & Store Name ────────────────────────── */}
       <div className="relative rounded-2xl overflow-hidden border border-border/50 bg-card shadow-sm">
         {/* Decorative background blur blobs */}
         <div className="absolute top-0 right-0 w-96 h-96 -mt-32 -mr-32 bg-primary/8 blur-[120px] rounded-full pointer-events-none" />
@@ -224,104 +196,26 @@ export default function StoreSettingsPage() {
 
         <div className="relative z-10 p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
 
-          {/* Logo upload (Clickable overlay + hover effect) */}
-          <div
-            className="relative group cursor-pointer shrink-0"
-            onMouseEnter={() => setIsHoveringLogo(true)}
-            onMouseLeave={() => setIsHoveringLogo(false)}
-            onClick={() => fileInputRef.current?.click()}
-            title="Click to update store logo"
-          >
-            {/* Glow ring */}
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-primary to-blue-500 rounded-full blur opacity-25 group-hover:opacity-50 transition-opacity duration-500" />
+          {/* Logo */}
+          <div className="relative shrink-0">
+            <div className="absolute -inset-1.5 bg-gradient-to-r from-primary/10 to-blue-500/10 rounded-full blur opacity-25" />
             <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden border-4 border-background shadow-xl bg-muted flex items-center justify-center">
-              {updateLogoMutation.isPending ? (
-                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-              ) : (
-                <Image
-                  src={store.logo || "/placeholder.png"}
-                  alt={store.name}
-                  fill
-                  unoptimized
-                  className={`object-cover transition-all duration-500 ${isHoveringLogo ? "scale-105 brightness-50" : "scale-100"}`}
-                />
-              )}
-              <div
-                className={`absolute inset-0 flex flex-col items-center justify-center text-white gap-1 transition-opacity duration-300 ${isHoveringLogo && !updateLogoMutation.isPending ? "opacity-100" : "opacity-0"}`}
-              >
-                <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
-                <span className="text-[9px] font-black uppercase tracking-wider">Change Logo</span>
-              </div>
+              <Image
+                src={store.logo || "/placeholder.png"}
+                alt={store.name}
+                fill
+                unoptimized
+                className="object-cover scale-100"
+              />
             </div>
           </div>
 
           {/* Name + meta */}
           <div className="flex-1 min-w-0 text-center md:text-left pt-2">
-            {/* Editable name row */}
-            <div className="flex items-center gap-3 justify-center md:justify-start mb-3 flex-wrap">
-              <AnimatePresence mode="wait">
-                {isEditingName ? (
-                  <motion.div
-                    key="edit"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    className="flex items-center gap-2 w-full max-w-md"
-                  >
-                    <input
-                      ref={nameInputRef}
-                      value={nameValue}
-                      onChange={(e) => {
-                        setNameValue(e.target.value);
-                        setShowNameWarning(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleNameSave();
-                        if (e.key === "Escape") handleNameCancel();
-                      }}
-                      className="flex-1 text-xl sm:text-2xl md:text-3xl font-black bg-background border-2 border-primary/45 focus:border-primary rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 outline-none transition-colors"
-                      placeholder="Store name…"
-                      maxLength={80}
-                    />
-                    <button
-                      onClick={handleNameSave}
-                      disabled={updateStoreMutation.isPending || !isDirty}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
-                    >
-                      {updateStoreMutation.isPending ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={handleNameCancel}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer shrink-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="display"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="flex items-center gap-2.5 group/name"
-                  >
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-foreground">
-                      {store.name}
-                    </h1>
-                    <button
-                      onClick={() => setIsEditingName(true)}
-                      className="w-8 h-8 rounded-lg bg-muted/0 hover:bg-muted text-muted-foreground/0 group-hover/name:text-muted-foreground flex items-center justify-center transition-all duration-200 cursor-pointer shrink-0"
-                      title="Edit store name"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="flex items-center gap-2.5 justify-center md:justify-start mb-3 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-foreground">
+                {store.name}
+              </h1>
 
               {store.is_active && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-wider border border-emerald-500/20 shrink-0">

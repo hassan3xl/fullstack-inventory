@@ -24,8 +24,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import SignoutButton from "../auth/SignoutButton";
 
+import { BASE_URL } from "@/lib/services/apiService";
+
 export function AccountDropdown() {
   const { user, loading, signOut } = useAuth();
+  const permissions = user?.permissions;
+
+  const isPlatformAdmin =
+    user?.role === "platform_admin" || permissions?.platform_role === "platform_admin";
 
   return (
     <div>
@@ -59,39 +65,74 @@ export function AccountDropdown() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/account"
-                    className="cursor-pointer flex items-center gap-2"
-                  >
-                    <User className="h-4 w-4" />
-                    Account
-                  </Link>
-                </DropdownMenuItem>
+                {!isPlatformAdmin ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/account"
+                        className="cursor-pointer flex items-center gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        Account
+                      </Link>
+                    </DropdownMenuItem>
 
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/dashboard"
-                    className="cursor-pointer flex items-center gap-2"
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/dashboard"
+                        className="cursor-pointer flex items-center gap-2"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
 
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/store"
-                    className="cursor-pointer flex items-center gap-2"
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                    Store
-                  </Link>
-                </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link
+                        href="/store"
+                        className="cursor-pointer flex items-center gap-2"
+                      >
+                        <ShoppingBag className="h-4 w-4" />
+                        Store
+                      </Link>
+                    </DropdownMenuItem>
+
+                    {(user?.permissions?.is_owner ||
+                      user?.permissions?.is_admin ||
+                      user?.role === "is_owner") && (
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href="/settings"
+                          className="cursor-pointer flex items-center gap-2"
+                        >
+                          <Settings2 className="h-4 w-4" />
+                          Settings
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={
+                        BASE_URL
+                          ? BASE_URL.replace(/\/api\/?$/, "")
+                          : "http://localhost:8000"
+                      }
+                      className="cursor-pointer flex items-center gap-2"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Platform Admin
+                    </a>
+                  </DropdownMenuItem>
+                )}
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem asChild className="cursor-pointer text-red-600 focus:text-red-600 flex items-center gap-2">
+                <DropdownMenuItem
+                  asChild
+                  className="cursor-pointer text-red-600 focus:text-red-600 flex items-center gap-2"
+                >
                   <SignoutButton />
                 </DropdownMenuItem>
               </DropdownMenuContent>

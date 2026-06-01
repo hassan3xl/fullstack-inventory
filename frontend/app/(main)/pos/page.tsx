@@ -11,6 +11,7 @@ import ProductCard from "@/components/products/ProductCard";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/utils";
 import { NormalInput } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Search,
   ShoppingCart,
@@ -68,8 +69,10 @@ export default function POSClient() {
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
 
+  const debouncedCustomerSearch = useDebounce(customerSearch, 300);
+
   const { data: customerSuggestions } = useGetCustomers(
-    customerSearch.trim() || undefined,
+    debouncedCustomerSearch.trim() || undefined,
   );
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
