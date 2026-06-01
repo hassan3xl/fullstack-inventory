@@ -4,10 +4,8 @@ from apps.products.api import (
     ProductCategorySerializer,
     ProductSerializer,
     ProductCreateSerializer,
-    ProductImageWriteSerializer,
     ProductInventoryWriteSerializer,
 )
-from apps.products.models import ProductImage
 
 # from ..config.permissions import IsMerchantUser, IsActiveVerifiedMerchant
 from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantManager
@@ -331,9 +329,9 @@ class ProductImagesViewSet(viewsets.ViewSet):
     # GET /products/<product_id>/images/
     def list(self, request, product_id=None):
         product = get_object_or_404(Product, id=product_id)
-        images = product.images.all()
-        serializer = ProductImageWriteSerializer(images, many=True)
-        return Response(serializer.data)
+        if product.image:
+            return Response([{"id": "primary", "image": product.image.url, "is_primary": True}])
+        return Response([])
 
     # POST /products/<product_id>/images/
     def create(self, request, product_id=None):
@@ -343,31 +341,22 @@ class ProductImagesViewSet(viewsets.ViewSet):
         if not file:
             return Response({"error": "No image provided"}, status=400)
 
-        image = ProductImage.objects.create(product=product, image=file)
+        product.image = file
+        product.save()
 
-        return Response({"status": "success", "id": image.id}, status=201)
+        return Response({"status": "success", "id": "primary"}, status=201)
 
     # DELETE /products/<product_id>/images/<image_id>/
     def destroy(self, request, product_id=None, pk=None):
         product = get_object_or_404(Product, id=product_id)
-        image = get_object_or_404(ProductImage, id=pk, product=product)
-
-        image.delete()
+        product.image = None
+        product.save()
         return Response({"status": "image deleted"}, status=200)
 
     # POST /products/<product_id>/images/<image_id>/set-primary/
     @action(detail=True, methods=["post"])
     def set_primary(self, request, product_id=None, pk=None):
-        product = get_object_or_404(Product, id=product_id)
-        image = get_object_or_404(ProductImage, id=pk, product=product)
-
-        # remove primary from all images first
-        product.images.update(is_primary=False)
-
-        image.is_primary = True
-        image.save()
-
-        return Response({"status": "primary image set", "image_id": image.id})
+        return Response({"status": "primary image set", "image_id": "primary"})
 
 
 

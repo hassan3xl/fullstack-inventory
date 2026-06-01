@@ -104,8 +104,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   const isLoadingActive = !category && categoryLoading;
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const isGlobal =
     isEditMode &&
@@ -138,12 +136,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
         default_best_before_days: activeCategory.default_best_before_days ?? 0,
         expiry_strategy: activeCategory.expiry_strategy ?? "GENERAL",
       });
-      if (activeCategory.image) {
-        setImagePreview(activeCategory.image);
-      } else {
-        setImagePreview(null);
-      }
-      setSelectedFile(null);
     }
   }, [activeCategory, isEditMode, reset]);
 
@@ -156,8 +148,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
         default_best_before_days: 0,
         expiry_strategy: "GENERAL",
       });
-      setSelectedFile(null);
-      setImagePreview(null);
     }
   }, [isModalOpen, isEditMode, reset]);
 
@@ -175,9 +165,6 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
       "expiry_strategy",
       showExpirySection ? data.expiry_strategy : "GENERAL",
     );
-    if (selectedFile) {
-      formData.append("image", selectedFile);
-    }
 
     if (isEditMode) {
       if (isGlobal) return;

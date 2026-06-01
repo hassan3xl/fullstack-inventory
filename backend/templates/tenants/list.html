@@ -32,11 +32,7 @@
           >
             Tenant Name
           </th>
-          <th
-            class="h-12 px-4 text-left align-middle font-medium text-muted-foreground"
-          >
-            Subdomain
-          </th>
+
           <th
             class="h-12 px-4 text-left align-middle font-medium text-muted-foreground"
           >
@@ -63,16 +59,7 @@
           class="border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
         >
           <td class="p-4 align-middle font-medium">{{ tenant.name }}</td>
-          <td class="p-4 align-middle text-muted-foreground">
-            <a
-              href="http://{{ tenant.subdomain }}.myapp.com"
-              class="hover:text-primary transition-colors hover:underline underline-offset-4"
-              target="_blank"
-            >
-              <i class="fas fa-external-link-alt text-xs mr-1 opacity-50"></i>
-              {{ tenant.subdomain }}.myapp.com
-            </a>
-          </td>
+
           <td class="p-4 align-middle text-muted-foreground font-medium">
             {{ tenant.get_business_type_display }}
           </td>
@@ -168,20 +155,7 @@
           action="{% url 'tenant_list' %}"
           method="POST"
           x-data="{ 
-                    name: '', 
-                    subdomain: '',
-                    autoSlug: true,
-                    slugify(text) {
-                        return text.toLowerCase()
-                            .replace(/[^a-z0-9]/g, '-')
-                            .replace(/-+/g, '-')
-                            .replace(/^-|-$/g, '');
-                    },
-                    updateSubdomain() {
-                        if (this.autoSlug) {
-                            this.subdomain = this.slugify(this.name);
-                        }
-                    }
+                    name: ''
                 }"
         >
           {% csrf_token %}
@@ -213,7 +187,6 @@
                   name="name"
                   id="name"
                   x-model="name"
-                  @input="updateSubdomain"
                   class="shadcn-input flex h-10 w-full px-3 py-2 text-sm placeholder:text-muted-foreground bg-background/50 border-zinc-800"
                   placeholder="e.g. Marcus Grocery"
                   required
@@ -304,33 +277,7 @@
                   </div>
                 </div>
 
-                <!-- Subdomain -->
-                <div class="space-y-2">
-                  <label
-                    for="subdomain"
-                    class="text-sm font-semibold leading-none"
-                    >Subdomain</label
-                  >
-                  <div
-                    class="flex rounded-md border border-zinc-800 bg-background/50 shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-ring transition-all"
-                  >
-                    <input
-                      type="text"
-                      name="subdomain"
-                      id="subdomain"
-                      x-model="subdomain"
-                      @input="autoSlug = false"
-                      class="flex h-10 w-full bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none border-0"
-                      placeholder="subdomain"
-                      required
-                    />
-                    <div
-                      class="flex items-center justify-center bg-zinc-900 px-3 text-xs font-medium text-muted-foreground border-l border-zinc-800"
-                    >
-                      .myapp.com
-                    </div>
-                  </div>
-                </div>
+
               </div>
             </div>
           </div>

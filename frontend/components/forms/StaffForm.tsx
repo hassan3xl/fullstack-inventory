@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 interface StaffFormValues {
   first_name: string;
   last_name: string;
@@ -39,9 +41,14 @@ const StaffForm: React.FC<StaffFormProps> = ({
   closeModal,
   selectedStaff,
 }) => {
+  const { user } = useAuth();
   const isEditMode = !!selectedStaff;
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isCurrentUserOwner = user?.permissions?.is_owner;
+  const isTargetOwner = selectedStaff?.role === "owner";
+  const disableFormFields = isTargetOwner && !isCurrentUserOwner;
 
   const {
     register,
@@ -170,12 +177,19 @@ const StaffForm: React.FC<StaffFormProps> = ({
         }
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {disableFormFields && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-medium">
+              Only the business owner can modify their own details.
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               name="first_name"
               label="First Name"
               register={register}
               error={errors.first_name}
+              disabled={disableFormFields}
               validation={{ required: "First name is required" }}
               placeholder="John"
             />
@@ -184,6 +198,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               label="Last Name"
               register={register}
               error={errors.last_name}
+              disabled={disableFormFields}
               validation={{ required: "Last name is required" }}
               placeholder="Doe"
             />
@@ -206,9 +221,9 @@ const StaffForm: React.FC<StaffFormProps> = ({
             field="select"
             register={register}
             error={errors.role}
-            disabled={selectedStaff?.role === "owner"}
+            disabled={isTargetOwner}
             options={[
-              ...(selectedStaff?.role === "owner"
+              ...(isTargetOwner
                 ? [{ value: "owner", label: "Owner" }]
                 : []),
               { value: "cashier", label: "Cashier" },
@@ -229,7 +244,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || disableFormFields}
                 className="flex-1 rounded-lg h-11 shadow-lg shadow-primary/10 font-bold cursor-pointer"
               >
                 {isPending ? (

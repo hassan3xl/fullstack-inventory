@@ -11,7 +11,6 @@ export interface User {
   permissions?: {
     platform_role: string;
     store_role: string | null;
-    is_platform_admin: boolean;
     is_owner: boolean;
     is_admin: boolean;
     is_manager: boolean;
@@ -58,7 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Clear client-side cookies
     document.cookie = "session_user=; max-age=0; path=/;";
     document.cookie = "session_access_token=; max-age=0; path=/;";
-    
+
     // Clear server-side cookies
     await resetAuthCookies();
     setUser(null);
