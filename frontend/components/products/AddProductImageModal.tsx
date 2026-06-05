@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import BaseModal from "../modals/BaseModal";
 import { toast } from "sonner";
-import { useUploadProductImage, useDeleteProductImage } from "@/lib/hooks/product.hook";
+import {
+  useUploadProductImage,
+  useDeleteProductImage,
+} from "@/lib/hooks/product.hook";
 import { Upload, X } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -47,7 +50,10 @@ const AddProductImageModal: React.FC<AddProductImageModalProps> = ({
 
     try {
       if (existingImageId) {
-        await deleteImageMutation.mutateAsync({ productId, imageId: existingImageId });
+        await deleteImageMutation.mutateAsync({
+          productId,
+          imageId: existingImageId,
+        });
       }
       await uploadImageMutation.mutateAsync({ productId, formData });
       toast.success("Image uploaded successfully");
@@ -107,15 +113,26 @@ const AddProductImageModal: React.FC<AddProductImageModalProps> = ({
           )}
         </div>
         <div className="flex gap-3 pt-4 justify-end">
-          <Button type="button" variant="outline" onClick={closeModal} className="cursor-pointer">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={closeModal}
+            className="cursor-pointer"
+          >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={!selectedFile || uploadImageMutation.isPending || deleteImageMutation.isPending}
+            disabled={
+              !selectedFile ||
+              uploadImageMutation.isPending ||
+              deleteImageMutation.isPending
+            }
             className="cursor-pointer"
           >
-            {uploadImageMutation.isPending || deleteImageMutation.isPending ? "Uploading..." : "Upload Image"}
+            {uploadImageMutation.isPending || deleteImageMutation.isPending
+              ? "Uploading..."
+              : "Upload Image"}
           </Button>
         </div>
       </form>

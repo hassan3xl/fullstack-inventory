@@ -285,7 +285,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
 
           {/* ── Expiry Strategy (shown only when business type supports it) ── */}
           {showExpirySection && (
-            <div className="space-y-4 bg-primary/5 p-6 rounded-lg border border-primary/10">
+            <div className="space-y-4 pt-6 border-t border-border/40">
               <h4 className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-wider">
                 <ShieldCheck size={16} /> Expiry Strategy
               </h4>

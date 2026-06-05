@@ -21,6 +21,7 @@ import { apiService } from "@/lib/services/apiService";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
+import HomeNavbar from "@/components/layout/HomeNavbar";
 
 const sections = [
   { id: "getting-started", title: "Getting Started", icon: BookOpen },
@@ -97,6 +98,8 @@ export default function DocsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <HomeNavbar prop="Documentation" />
+
       <div className="flex items-center gap-4 border-b border-border/50 pb-6">
         <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
           <BookOpen size={24} />

@@ -169,7 +169,7 @@ const ProductsInventory: React.FC = () => {
                 onClick={() => setIsModalOpen(true)}
                 className="rounded-lg h-12 px-6 font-black shadow-lg shadow-primary/20"
               >
-                + Register Product
+                + Add Product
               </Button>
             }
           />

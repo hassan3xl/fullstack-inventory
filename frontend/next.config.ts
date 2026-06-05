@@ -15,6 +15,12 @@ const config: NextConfig = {
   experimental: {
     // turbo: {},
   },
+
+  allowedDevOrigins: [
+    "api.qstack.com.ng",
+    "dev.qstack.com.ng",
+    "testing.qstack.com.ng",
+  ],
 };
 
 export default config;

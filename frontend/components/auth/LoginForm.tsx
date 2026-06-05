@@ -42,7 +42,7 @@ export default function LoginForm() {
 
         // Small delay to show the toast before redirect
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/dashboard";
         }, 1000);
       } else {
         toast.error("Login failed", {
