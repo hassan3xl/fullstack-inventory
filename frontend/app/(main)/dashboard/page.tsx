@@ -11,6 +11,7 @@ import {
   ArrowDownRight,
   Clock,
   Calendar,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -85,7 +86,7 @@ const DashboardClient = () => {
       icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
       bg: "bg-amber-500/10",
     },
-    
+
     // Only show expiry stat for store types that track expiry
     ...(showExpiry
       ? [
@@ -101,7 +102,7 @@ const DashboardClient = () => {
   ];
 
   if (isLoading) {
-    return <Loader />
+    return <Loader />;
   }
 
   return (
@@ -109,18 +110,29 @@ const DashboardClient = () => {
       {/* Header Section */}
       <Header
         title="Inventory Overview"
-        subtitle="Manage your products, track stock levels, and monitor expiration dates."
+        subtitle=""
         stats={stats}
         actions={
-          <Button
-            asChild
-            className="shadow-lg shadow-primary/25 rounded-lg px-6"
-          >
-            <Link href="/products">
-              <Plus className="w-4 h-4 mr-2" />
-              Manage Products
-            </Link>
-          </Button>
+          <>
+            <Button
+              asChild
+              className="shadow-lg shadow-primary/25 rounded-lg px-6"
+            >
+              <Link href="/products">
+                <Plus className="w-4 h-4 mr-2" />
+                Manage Products
+              </Link>
+            </Button>
+            <Button
+              asChild
+              className="shadow-lg shadow-primary/25 rounded-lg px-6"
+            >
+              <Link href="/pos">
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Sell Products
+              </Link>
+            </Button>
+          </>
         }
       />
 

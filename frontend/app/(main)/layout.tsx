@@ -18,14 +18,20 @@ export default function RootLayout({
     if (!loading) {
       if (!user) {
         window.location.href = "/login";
-      } else if (user.role === "platform_admin" || user.permissions?.platform_role === "platform_admin") {
-        const backendUrl = BASE_URL ? BASE_URL.replace(/\/api\/?$/, "") : "http://localhost:8000";
-        window.location.href = backendUrl;
+      } else if (
+        user.role === "platform_admin" ||
+        user.permissions?.platform_role === "platform_admin"
+      ) {
       }
     }
   }, [user, loading]);
 
-  if (loading || !user || user.role === "platform_admin" || user.permissions?.platform_role === "platform_admin") {
+  if (
+    loading ||
+    !user ||
+    user.role === "platform_admin" ||
+    user.permissions?.platform_role === "platform_admin"
+  ) {
     return <Loader />;
   }
 

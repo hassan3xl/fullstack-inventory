@@ -35,7 +35,14 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
 }) => {
   const updateBatchMutation = useUpdateStockBatch();
 
-  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+    reset,
+  } = useForm<FormValues>({
     defaultValues: {
       quantity: "",
       initial_quantity: "",
@@ -43,7 +50,7 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
       production_date: "",
       best_before_days: "",
       expiry_date: "",
-    }
+    },
   });
 
   const productionDate = watch("production_date");
@@ -84,7 +91,9 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
       const prodDate = new Date(productionDate);
       const days = parseInt(bestBeforeDays);
       if (!isNaN(prodDate.getTime()) && !isNaN(days)) {
-        const expDate = new Date(prodDate.getTime() + days * 24 * 60 * 60 * 1000);
+        const expDate = new Date(
+          prodDate.getTime() + days * 24 * 60 * 60 * 1000,
+        );
         const expDateStr = expDate.toISOString().split("T")[0];
         if (expiryDate !== expDateStr) {
           setValue("expiry_date", expDateStr);
@@ -140,7 +149,9 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
       if (onBatchUpdated) onBatchUpdated();
       closeModal();
     } catch (error: any) {
-      toast.error(error?.error || error?.detail || "Failed to update stock batch.");
+      toast.error(
+        error?.error || error?.detail || "Failed to update stock batch.",
+      );
     }
   };
 
@@ -163,9 +174,9 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
               icon={Layers}
               placeholder="e.g. 50"
               error={errors.quantity}
-              validation={{ 
+              validation={{
                 required: "Remaining quantity is required",
-                min: { value: 0, message: "Quantity cannot be negative" }
+                min: { value: 0, message: "Quantity cannot be negative" },
               }}
             />
 
@@ -177,9 +188,9 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
               icon={Layers}
               placeholder="e.g. 100"
               error={errors.initial_quantity}
-              validation={{ 
+              validation={{
                 required: "Initial quantity is required",
-                min: { value: 0, message: "Quantity cannot be negative" }
+                min: { value: 0, message: "Quantity cannot be negative" },
               }}
             />
           </div>
@@ -213,7 +224,7 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
               placeholder="e.g. 30"
               error={errors.best_before_days}
               validation={{
-                min: { value: 0, message: "Value cannot be negative" }
+                min: { value: 0, message: "Value cannot be negative" },
               }}
             />
           </div>

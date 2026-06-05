@@ -76,10 +76,10 @@ export default function Sidebar() {
           <div>
             <div className="space-y-1 mt-2">
               <Link
-                href="/"
+                href="/dashboard"
                 onClick={closeSidebar}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                  isActive("/")
+                  isActive("/dashboard")
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                     : "hover:bg-accent/50 text-foreground"
                 }`}

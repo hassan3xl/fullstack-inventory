@@ -8,7 +8,7 @@ from apps.products.api import (
 )
 
 # from ..config.permissions import IsMerchantUser, IsActiveVerifiedMerchant
-from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantManager
+from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantManager, IsTenantAdmin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -59,11 +59,15 @@ class InventoryStatsView(APIView):
 
 class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = ProductCategorySerializer
-    permission_classes = [IsAuthenticated, HasTenantAccess]
     lookup_field = 'name'
     
     from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsTenantAdmin()]
+        return [IsAuthenticated(), HasTenantAccess()]
 
     def get_queryset(self):
         tenant = getattr(self.request, 'tenant', None)
@@ -136,7 +140,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsTenantAdmin()]
+        return [IsAuthenticated(), HasTenantAccess()]
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -302,7 +310,7 @@ class BatchDetailView(APIView):
 
 
 class ProductInventoryView(APIView):
-    permission_classes = [IsAuthenticated, HasTenantAccess]
+    permission_classes = [IsAuthenticated, IsTenantAdmin]
 
     def patch(self, request, pk):
         product = get_object_or_404(Product, pk=pk)
@@ -322,9 +330,13 @@ class ProductInventoryView(APIView):
 
 
 class ProductImagesViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, HasTenantAccess]
     from rest_framework.parsers import MultiPartParser, FormParser
     parser_classes = (MultiPartParser, FormParser)
+
+    def get_permissions(self):
+        if self.action in ['create', 'destroy', 'set_primary']:
+            return [IsAuthenticated(), IsTenantAdmin()]
+        return [IsAuthenticated(), HasTenantAccess()]
 
     # GET /products/<product_id>/images/
     def list(self, request, product_id=None):

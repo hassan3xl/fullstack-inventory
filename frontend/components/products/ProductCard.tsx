@@ -1,6 +1,13 @@
 "use client";
 
-import { Edit, Trash2, Eye, MoreVertical, Package, ShoppingCart } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Eye,
+  MoreVertical,
+  Package,
+  ShoppingCart,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState } from "react";
@@ -112,9 +119,7 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
       </div>
 
       {/* Image Container */}
-      <div
-        className="relative overflow-hidden aspect-square bg-muted/30"
-      >
+      <div className="relative overflow-hidden aspect-square bg-muted/30">
         <Image
           src={imageError ? "/default_product.png" : productImage}
           alt={product.name}
@@ -122,7 +127,6 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover group-hover:scale-105 transition-transform duration-700"
           onError={() => setImageError(true)}
-          unoptimized
         />
       </div>
 
@@ -137,7 +141,8 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
           </h3>
 
           {/* Variants & Capacity Specs */}
-          {((product.variants && product.variants.length > 0) || (product.capacities && product.capacities.length > 0)) && (
+          {((product.variants && product.variants.length > 0) ||
+            (product.capacities && product.capacities.length > 0)) && (
             <div className="space-y-1.5 pt-2 border-t border-border/30 mt-2">
               {product.variants && product.variants.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1">
@@ -217,7 +222,8 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
             <Eye size={14} />
             View Info
           </Button>
-          {(!!user?.permissions?.is_staff || !!user?.permissions?.store_role) && (
+          {(!!user?.permissions?.is_staff ||
+            !!user?.permissions?.store_role) && (
             <Button
               type="button"
               onClick={(e) => {
@@ -235,7 +241,6 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
               className="flex-1 rounded-xl py-2 h-10 font-bold bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 active:scale-[0.98] cursor-pointer text-xs"
             >
               <ShoppingCart size={14} />
-              Add to Cart
             </Button>
           )}
         </div>

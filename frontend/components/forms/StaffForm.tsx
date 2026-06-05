@@ -162,7 +162,9 @@ const StaffForm: React.FC<StaffFormProps> = ({
     removeStaffMutation.mutate(selectedStaff.id);
   };
 
-  const isPending = isEditMode ? editStaffMutation.isPending : addStaffMutation.isPending;
+  const isPending = isEditMode
+    ? editStaffMutation.isPending
+    : addStaffMutation.isPending;
 
   return (
     <>
@@ -172,8 +174,8 @@ const StaffForm: React.FC<StaffFormProps> = ({
         title={isEditMode ? "Manage Staff Member" : "Add Team Member"}
         description={
           isEditMode
-            ? "Update staff metadata, role status, or revoke system login permission."
-            : "Provision login credentials and system access to your staff."
+            ? "Update access roles or revoke access for this employee."
+            : "Invite a new member to join your store team."
         }
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -223,9 +225,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
             error={errors.role}
             disabled={isTargetOwner}
             options={[
-              ...(isTargetOwner
-                ? [{ value: "owner", label: "Owner" }]
-                : []),
+              ...(isTargetOwner ? [{ value: "owner", label: "Owner" }] : []),
               { value: "cashier", label: "Cashier" },
               { value: "manager", label: "Manager" },
               { value: "admin", label: "Co-Admin" },
@@ -287,7 +287,8 @@ const StaffForm: React.FC<StaffFormProps> = ({
               Revoke System Access
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base font-medium">
-              Are you sure you want to remove this staff member? This will revoke all access privileges to the platform.
+              Are you sure you want to remove this staff member? This will
+              revoke all access privileges to the platform.
               {selectedStaff && (
                 <div className="mt-4 p-4 rounded-lg bg-red-50 border border-red-100 font-bold text-red-700">
                   {selectedStaff.full_name || selectedStaff.email}

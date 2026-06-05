@@ -1,4 +1,24 @@
-import { getAccessToken, resetAuthCookies } from "../actions/auth.actions";
+import { getAccessToken as getServerAccessToken, resetAuthCookies } from "../actions/auth.actions";
+
+function getClientAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("session_access_token="));
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match.split("=")[1]);
+  } catch {
+    return match.split("=")[1] || null;
+  }
+}
+
+async function getAccessToken(): Promise<string | null> {
+  if (typeof window !== "undefined") {
+    return getClientAccessToken();
+  }
+  return getServerAccessToken();
+}
 
 // development
 export const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
