@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 from .models import (
     Product,
-    ProductImage,
     Category,
     ProductInventory,
     StockBatch,
@@ -89,28 +88,14 @@ class ProductCategorySerializer(ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ["id", 'name', 'image', 'description', 'business_type', 'default_best_before_days', 'expiry_strategy', 'tenant', 'product_count']
+        fields = ["id", 'name', 'description', 'business_type', 'default_best_before_days', 'expiry_strategy', 'tenant', 'product_count']
 
     def get_product_count(self, obj):
         return obj.products.count()
 
 
-class ProductImageSerializer(ModelSerializer):
-    image = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ProductImage
-        fields = ['id', 'image', 'is_primary']
-
-    def get_image(self, obj):
-        """This method MUST be named get_<field_name>"""
-        if obj.image:
-            return obj.image.url
-        return None
-
-
 class ProductSerializer(ModelSerializer):
-    images        = ProductImageSerializer(many=True, read_only=True)
+    images        = serializers.SerializerMethodField()
     category      = ProductCategorySerializer(read_only=True)
     inventory     = ProductInventorySerializer(read_only=True, allow_null=True)
     # Batches ordered FEFO: soonest-expiring first (NULLs last)
@@ -128,6 +113,11 @@ class ProductSerializer(ModelSerializer):
             'stock_status', 'batch_summary',
             'inventory', 'images', 'batches',
         ]
+
+    def get_images(self, obj):
+        if obj.image:
+            return [{"id": "primary", "image": obj.image.url, "is_primary": True}]
+        return []
 
     def get_batches(self, obj):
         """Return live batches ordered FEFO (expired batches listed last)."""
@@ -174,13 +164,12 @@ class ProductSerializer(ModelSerializer):
 class CategorySerializer(ModelSerializer):
     product_count = serializers.SerializerMethodField()
     products = ProductSerializer(many=True, read_only=True)
-    image = serializers.SerializerMethodField()
     business_type_display = serializers.CharField(source='get_business_type_display', read_only=True)
 
     class Meta:
         model = Category
         fields = [
-            'id', 'name', 'image', 'description',
+            'id', 'name', 'description',
             'business_type', 'business_type_display',
             'default_best_before_days', 'expiry_strategy',
             'product_count', 'products', 'tenant',
@@ -188,12 +177,6 @@ class CategorySerializer(ModelSerializer):
 
     def get_product_count(self, obj):
         return obj.products.count()
-
-    def get_image(self, obj):
-        """This method MUST be named get_<field_name>"""
-        if obj.image:
-            return obj.image.url
-        return None
 
 
 # Serializers from controllers/inventory/products
@@ -224,18 +207,3 @@ class ProductInventoryWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductInventory
         fields = '__all__'
-
-
-
-class ProductImageWriteSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ProductImage
-        fields = ['id', 'image', 'is_primary']
-
-    def get_image(self, obj):
-        """This method MUST be named get_<field_name>"""
-        if obj.image:
-            return obj.image.url
-        return None

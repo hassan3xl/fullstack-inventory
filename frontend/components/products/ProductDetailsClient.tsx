@@ -37,7 +37,7 @@ const ProductDetailsClient = () => {
   const { user } = useAuth();
   const permissions = user?.permissions;
   const isPlatformAdmin =
-    user?.role === "platform_admin" || permissions?.is_platform_admin;
+    user?.role === "is_owner" || permissions?.platform_role === "is_admin";
   const canModify =
     isPlatformAdmin ||
     permissions?.is_owner ||
@@ -164,9 +164,9 @@ const ProductDetailsClient = () => {
   const isOutOfStock = stockCount === 0;
   const isActive = product?.is_active !== false;
 
-if (isProductLoading) {
-  return <Loader />
-}
+  if (isProductLoading) {
+    return <Loader />;
+  }
 
   // Error state
   if (productError || !product) {
@@ -463,7 +463,9 @@ if (isProductLoading) {
                     {/* Middle row: Quantity & Days Left */}
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div>
-                        <p className="text-muted-foreground font-semibold">Quantity</p>
+                        <p className="text-muted-foreground font-semibold">
+                          Quantity
+                        </p>
                         <p className="font-bold text-foreground mt-0.5">
                           {batch.quantity}{" "}
                           <span className="text-muted-foreground font-medium">
@@ -472,7 +474,9 @@ if (isProductLoading) {
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground font-semibold">Shelf Life</p>
+                        <p className="text-muted-foreground font-semibold">
+                          Shelf Life
+                        </p>
                         <p className="font-bold mt-0.5">
                           {batch.days_until_expiry !== null &&
                           batch.days_until_expiry !== undefined ? (
@@ -497,15 +501,21 @@ if (isProductLoading) {
                     {/* Date Row: Production & Expiry */}
                     <div className="grid grid-cols-2 gap-4 text-xs pt-3 border-t border-border/40">
                       <div>
-                        <p className="text-muted-foreground font-semibold">Production Date</p>
+                        <p className="text-muted-foreground font-semibold">
+                          Production Date
+                        </p>
                         <p className="text-foreground font-medium mt-0.5">
                           {batch.production_date
-                            ? new Date(batch.production_date).toLocaleDateString()
+                            ? new Date(
+                                batch.production_date,
+                              ).toLocaleDateString()
                             : "-"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground font-semibold">Expiry Date</p>
+                        <p className="text-muted-foreground font-semibold">
+                          Expiry Date
+                        </p>
                         <p className="text-foreground font-bold mt-0.5">
                           {batch.expiry_date
                             ? new Date(batch.expiry_date).toLocaleDateString()
@@ -596,7 +606,9 @@ if (isProductLoading) {
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
                           {batch.production_date
-                            ? new Date(batch.production_date).toLocaleDateString()
+                            ? new Date(
+                                batch.production_date,
+                              ).toLocaleDateString()
                             : "-"}
                         </td>
                         <td className="px-6 py-4 text-sm font-semibold">
@@ -794,7 +806,10 @@ if (isProductLoading) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel onClick={()=> setDeleteConfirm({open: false, id: null })} className="rounded-lg h-12 px-6 font-bold border-border cursor-pointer">
+            <AlertDialogCancel
+              onClick={() => setDeleteConfirm({ open: false, id: null })}
+              className="rounded-lg h-12 px-6 font-bold border-border cursor-pointer"
+            >
               Cancel Action
             </AlertDialogCancel>
             <AlertDialogAction
@@ -834,7 +849,10 @@ if (isProductLoading) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel onClick={()=> setDeleteBatchConfirm({open: false, id: null})} className="rounded-lg h-12 px-6 font-bold border-border cursor-pointer">
+            <AlertDialogCancel
+              onClick={() => setDeleteBatchConfirm({ open: false, id: null })}
+              className="rounded-lg h-12 px-6 font-bold border-border cursor-pointer"
+            >
               Cancel Action
             </AlertDialogCancel>
             <AlertDialogAction

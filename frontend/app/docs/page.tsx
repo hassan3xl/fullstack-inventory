@@ -21,6 +21,7 @@ import { apiService } from "@/lib/services/apiService";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
+import HomeNavbar from "@/components/layout/HomeNavbar";
 
 const sections = [
   { id: "getting-started", title: "Getting Started", icon: BookOpen },
@@ -97,6 +98,8 @@ export default function DocsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <HomeNavbar prop="Documentation" />
+
       <div className="flex items-center gap-4 border-b border-border/50 pb-6">
         <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
           <BookOpen size={24} />
@@ -111,7 +114,7 @@ export default function DocsPage() {
 
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Docs Navigation */}
-        <div className="w-full lg:w-64 shrink-0 bg-card/50 border border-border/50 rounded-lg p-4 sticky top-24">
+        <div className="w-full lg:w-64 shrink-0 bg-card border border-border/50 rounded-lg p-4 sticky top-24 z-10">
           <nav className="space-y-2">
             {sections.map((section) => {
               const Icon = section.icon;
@@ -448,43 +451,63 @@ export default function DocsPage() {
                   <Info size={16} /> Store Classification Reference
                 </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Choosing the correct classification ensures your workspace starts with configuration rules and layouts optimized for your specific trade.
+                  Choosing the correct classification ensures your workspace
+                  starts with configuration rules and layouts optimized for your
+                  specific trade.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">Grocery Store</span>
+                    <span className="text-xs font-black text-foreground block">
+                      Grocery Store
+                    </span>
                     <span className="text-[11px] text-muted-foreground block">
-                      Optimized for supermarkets, supermarkets, fresh foods, bakeries, and fast-moving consumer retail.
+                      Optimized for supermarkets, supermarkets, fresh foods,
+                      bakeries, and fast-moving consumer retail.
                     </span>
                   </div>
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">Pharmacy & Medicine</span>
+                    <span className="text-xs font-black text-foreground block">
+                      Pharmacy & Medicine
+                    </span>
                     <span className="text-[11px] text-muted-foreground block">
-                      Optimized for medicines, drugs, prescription tracking, and shelf-life expiration safety alerts.
+                      Optimized for medicines, drugs, prescription tracking, and
+                      shelf-life expiration safety alerts.
                     </span>
                   </div>
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">Electronics & Gadgets</span>
+                    <span className="text-xs font-black text-foreground block">
+                      Electronics & Gadgets
+                    </span>
                     <span className="text-[11px] text-muted-foreground block">
-                      Optimized for serialized high-value items, appliances, tech devices, and brand classifications.
+                      Optimized for serialized high-value items, appliances,
+                      tech devices, and brand classifications.
                     </span>
                   </div>
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">Clothing & Apparel</span>
+                    <span className="text-xs font-black text-foreground block">
+                      Clothing & Apparel
+                    </span>
                     <span className="text-[11px] text-muted-foreground block">
-                      Optimized for boutique apparel, fashion items, footwear, and accessory size variations.
+                      Optimized for boutique apparel, fashion items, footwear,
+                      and accessory size variations.
                     </span>
                   </div>
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">General Retail</span>
+                    <span className="text-xs font-black text-foreground block">
+                      General Retail
+                    </span>
                     <span className="text-[11px] text-muted-foreground block">
-                      A versatile setup for general merchant stores, convenience shops, and multi-product retailers.
+                      A versatile setup for general merchant stores, convenience
+                      shops, and multi-product retailers.
                     </span>
                   </div>
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">Other</span>
+                    <span className="text-xs font-black text-foreground block">
+                      Other
+                    </span>
                     <span className="text-[11px] text-muted-foreground block">
-                      Standard settings for custom inventory segments not captured by major categories.
+                      Standard settings for custom inventory segments not
+                      captured by major categories.
                     </span>
                   </div>
                 </div>

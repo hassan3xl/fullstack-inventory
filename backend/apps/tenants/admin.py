@@ -1,5 +1,7 @@
-from .models import Tenant
+from .models import Tenant, TenantUser
 from django.contrib import admin
+
+admin.site.register(TenantUser)
 
 
 @admin.register(Tenant)

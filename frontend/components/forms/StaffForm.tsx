@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 interface StaffFormValues {
   first_name: string;
   last_name: string;
@@ -39,9 +41,14 @@ const StaffForm: React.FC<StaffFormProps> = ({
   closeModal,
   selectedStaff,
 }) => {
+  const { user } = useAuth();
   const isEditMode = !!selectedStaff;
   const queryClient = useQueryClient();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isCurrentUserOwner = user?.permissions?.is_owner;
+  const isTargetOwner = selectedStaff?.role === "owner";
+  const disableFormFields = isTargetOwner && !isCurrentUserOwner;
 
   const {
     register,
@@ -155,7 +162,9 @@ const StaffForm: React.FC<StaffFormProps> = ({
     removeStaffMutation.mutate(selectedStaff.id);
   };
 
-  const isPending = isEditMode ? editStaffMutation.isPending : addStaffMutation.isPending;
+  const isPending = isEditMode
+    ? editStaffMutation.isPending
+    : addStaffMutation.isPending;
 
   return (
     <>
@@ -165,17 +174,24 @@ const StaffForm: React.FC<StaffFormProps> = ({
         title={isEditMode ? "Manage Staff Member" : "Add Team Member"}
         description={
           isEditMode
-            ? "Update staff metadata, role status, or revoke system login permission."
-            : "Provision login credentials and system access to your staff."
+            ? "Update access roles or revoke access for this employee."
+            : "Invite a new member to join your store team."
         }
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {disableFormFields && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-medium">
+              Only the business owner can modify their own details.
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               name="first_name"
               label="First Name"
               register={register}
               error={errors.first_name}
+              disabled={disableFormFields}
               validation={{ required: "First name is required" }}
               placeholder="John"
             />
@@ -184,6 +200,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               label="Last Name"
               register={register}
               error={errors.last_name}
+              disabled={disableFormFields}
               validation={{ required: "Last name is required" }}
               placeholder="Doe"
             />
@@ -206,11 +223,9 @@ const StaffForm: React.FC<StaffFormProps> = ({
             field="select"
             register={register}
             error={errors.role}
-            disabled={selectedStaff?.role === "owner"}
+            disabled={isTargetOwner}
             options={[
-              ...(selectedStaff?.role === "owner"
-                ? [{ value: "owner", label: "Owner" }]
-                : []),
+              ...(isTargetOwner ? [{ value: "owner", label: "Owner" }] : []),
               { value: "cashier", label: "Cashier" },
               { value: "manager", label: "Manager" },
               { value: "admin", label: "Co-Admin" },
@@ -229,7 +244,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               </Button>
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || disableFormFields}
                 className="flex-1 rounded-lg h-11 shadow-lg shadow-primary/10 font-bold cursor-pointer"
               >
                 {isPending ? (
@@ -272,7 +287,8 @@ const StaffForm: React.FC<StaffFormProps> = ({
               Revoke System Access
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base font-medium">
-              Are you sure you want to remove this staff member? This will revoke all access privileges to the platform.
+              Are you sure you want to remove this staff member? This will
+              revoke all access privileges to the platform.
               {selectedStaff && (
                 <div className="mt-4 p-4 rounded-lg bg-red-50 border border-red-100 font-bold text-red-700">
                   {selectedStaff.full_name || selectedStaff.email}

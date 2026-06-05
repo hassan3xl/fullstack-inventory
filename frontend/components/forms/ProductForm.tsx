@@ -11,7 +11,17 @@ import {
 } from "@/lib/hooks/product.hook";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
 import { toast } from "sonner";
-import { Package, DollarSign, Info, Tag, ShieldCheck, X, Plus, Trash2, Layers } from "lucide-react";
+import {
+  Package,
+  DollarSign,
+  Info,
+  Tag,
+  ShieldCheck,
+  X,
+  Plus,
+  Trash2,
+  Layers,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { formatPriceWithCommas, parsePriceFromFormatted } from "@/lib/utils";
@@ -145,7 +155,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
     const v = variantInput.trim();
     if (!v) return;
     if (variants.includes(v)) {
-      toast.warning("Duplicate variant", { description: `"${v}" is already added.` });
+      toast.warning("Duplicate variant", {
+        description: `"${v}" is already added.`,
+      });
       return;
     }
     setValue("variants", [...variants, v]);
@@ -153,21 +165,31 @@ const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   const removeVariant = (idx: number) => {
-    setValue("variants", variants.filter((_, i) => i !== idx));
+    setValue(
+      "variants",
+      variants.filter((_, i) => i !== idx),
+    );
   };
 
   const addCapacity = () => {
     setValue("capacities", [...capacities, { name: "", price: "" }]);
   };
 
-  const updateCapacity = (idx: number, field: keyof CapacityEntry, value: string) => {
+  const updateCapacity = (
+    idx: number,
+    field: keyof CapacityEntry,
+    value: string,
+  ) => {
     const updated = [...capacities];
     updated[idx] = { ...updated[idx], [field]: value };
     setValue("capacities", updated);
   };
 
   const removeCapacity = (idx: number) => {
-    setValue("capacities", capacities.filter((_, i) => i !== idx));
+    setValue(
+      "capacities",
+      capacities.filter((_, i) => i !== idx),
+    );
   };
 
   // ── Submit handler ────────────────────────────────────────────────────────
@@ -197,8 +219,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
         await editMutation.mutateAsync(payload);
         toast.success("Product updated successfully!");
         closeModal();
-      } catch {
-        toast.error("Failed to update product.");
+      } catch (error: any) {
+        toast.error(
+          error?.detail || error?.message || "Failed to update product.",
+        );
       }
     } else {
       try {
@@ -212,8 +236,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
         onProductAdded?.();
         reset();
         closeModal();
-      } catch {
-        toast.error("Failed to add product to catalog.");
+      } catch (error: any) {
+        toast.error(
+          error?.detail || error?.message || "Failed to create product.",
+        );
       }
     }
   };
@@ -270,9 +296,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
           ? `Update the details for this ${config.labels.productSingular.toLowerCase()}.`
           : `Define ${config.labels.productSingular.toLowerCase()} details. Stock is managed separately via batches.`
       }
-      size="md"
+      // size="md"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* ── Core Fields ────────────────────────────────────────────── */}
         <div className="space-y-4">
           <h4 className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-widest">
@@ -329,7 +355,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* ── Business-type custom fields (from config) ──────────────── */}
         {config.customFields.length > 0 && (
-          <div className="space-y-4 bg-primary/5 p-5 rounded-lg border border-primary/10">
+          <div className="space-y-4 pt-6 border-t border-border/40">
             <h4 className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-widest">
               <Tag size={14} /> {config.displayName} Details
             </h4>
@@ -355,17 +381,23 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* ── Variants (conditional) ──────── */}
         {config.features.variantTracking && (
-          <section className="space-y-3 bg-muted/20 rounded-xl p-4 border border-border/40">
+          <section className="space-y-3 pt-6 border-t border-border/40">
             <div className="flex items-center gap-2">
               <Tag className="w-4 h-4 text-primary" />
               <span className="text-xs font-black uppercase tracking-widest text-foreground">
-                {businessType === "electronics" ? "Available Colors / Models" : "Variants / Colors"}
+                {businessType === "electronics"
+                  ? "Available Colors / Models"
+                  : "Variants / Colors"}
               </span>
             </div>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder={businessType === "electronics" ? "Add color/model (e.g. Midnight Black, Titanium Gray)…" : "Add variant (e.g. Red, Blue, XL)…"}
+                placeholder={
+                  businessType === "electronics"
+                    ? "Add color/model (e.g. Midnight Black, Titanium Gray)…"
+                    : "Add variant (e.g. Red, Blue, XL)…"
+                }
                 value={variantInput}
                 onChange={(e) => setVariantInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -408,12 +440,14 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* ── Capacities / Specs (conditional) ──────── */}
         {config.features.variantTracking && (
-          <section className="space-y-3 bg-muted/20 rounded-xl p-4 border border-border/40">
+          <section className="space-y-3 pt-6 border-t border-border/40">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
                 <span className="text-xs font-black uppercase tracking-widest text-foreground">
-                  {businessType === "electronics" ? "RAM / Storage Configurations" : "Size / Capacity Options"}
+                  {businessType === "electronics"
+                    ? "RAM / Storage Configurations"
+                    : "Size / Capacity Options"}
                 </span>
               </div>
               <button
@@ -444,7 +478,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   >
                     <input
                       type="text"
-                      placeholder={businessType === "electronics" ? "e.g. 256GB + 8GB RAM" : "e.g. 500ml, 1L, Small"}
+                      placeholder={
+                        businessType === "electronics"
+                          ? "e.g. 256GB + 8GB RAM"
+                          : "e.g. 500ml, 1L, Small"
+                      }
                       value={cap.name}
                       onChange={(e) =>
                         updateCapacity(idx, "name", e.target.value)
@@ -459,7 +497,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         placeholder="Price override"
                         value={cap.price}
                         onChange={(e) =>
-                          updateCapacity(idx, "price", formatPriceWithCommas(e.target.value))
+                          updateCapacity(
+                            idx,
+                            "price",
+                            formatPriceWithCommas(e.target.value),
+                          )
                         }
                         className="w-28 bg-transparent text-xs font-semibold outline-none placeholder:text-muted-foreground/50 text-foreground"
                       />

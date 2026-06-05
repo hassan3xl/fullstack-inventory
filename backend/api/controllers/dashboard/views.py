@@ -24,6 +24,11 @@ class BusinessProfileAPIView(APIView):
 
     def patch(self, request):
         tenant = request.tenant
+        new_requested_name = request.data.get('name')
+        if new_requested_name and new_requested_name != tenant.name:
+            if request.tenant_user.role != TenantUser.Role.OWNER:
+                return Response({"error": "Only the business owner can rename the store."}, status=status.HTTP_403_FORBIDDEN)
+
         old_name = tenant.name
         serializer = TenantSerializer(tenant, data=request.data, partial=True)
         if serializer.is_valid():
@@ -35,7 +40,6 @@ class BusinessProfileAPIView(APIView):
             return Response({
                 "id": tenant.id,
                 "name": tenant.name,
-                "subdomain": tenant.subdomain,
                 "logo": tenant.logo.url if tenant.logo else None,
                 "business_type": tenant.business_type,
                 "category": tenant.get_business_type_display(),
@@ -207,6 +211,10 @@ class StaffDetailAPIView(APIView):
             tenant_user = TenantUser.objects.get(user_id=user_id, tenant=tenant)
         except TenantUser.DoesNotExist:
             return Response({"error": "Staff member not found"}, status=404)
+
+        # Prevent non-owners from modifying owner details
+        if tenant_user.role == TenantUser.Role.OWNER and request.tenant_user.role != TenantUser.Role.OWNER:
+            return Response({"error": "Only the business owner can modify owner details."}, status=status.HTTP_403_FORBIDDEN)
 
         role = request.data.get('role')
         if role:

@@ -34,14 +34,21 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
 }) => {
   const receiveBatchMutation = useReceiveStockBatch();
 
-  const { register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+    reset,
+  } = useForm<FormValues>({
     defaultValues: {
       quantity: "",
       batch_number: "",
       production_date: "",
       best_before_days: "",
       expiry_date: "",
-    }
+    },
   });
 
   const productionDate = watch("production_date");
@@ -61,7 +68,9 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
       const prodDate = new Date(productionDate);
       const days = parseInt(bestBeforeDays);
       if (!isNaN(prodDate.getTime()) && !isNaN(days)) {
-        const expDate = new Date(prodDate.getTime() + days * 24 * 60 * 60 * 1000);
+        const expDate = new Date(
+          prodDate.getTime() + days * 24 * 60 * 60 * 1000,
+        );
         const expDateStr = expDate.toISOString().split("T")[0];
         if (expiryDate !== expDateStr) {
           setValue("expiry_date", expDateStr);
@@ -116,7 +125,9 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
       if (onBatchReceived) onBatchReceived();
       closeModal();
     } catch (error: any) {
-      toast.error(error?.error || error?.detail || "Failed to receive stock batch.");
+      toast.error(
+        error?.error || error?.detail || "Failed to receive stock batch.",
+      );
     }
   };
 
@@ -138,9 +149,9 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
             icon={Layers}
             placeholder="e.g. 100"
             error={errors.quantity}
-            validation={{ 
+            validation={{
               required: "Quantity is required",
-              min: { value: 1, message: "Quantity must be at least 1" }
+              min: { value: 1, message: "Quantity must be at least 1" },
             }}
           />
 
@@ -173,7 +184,7 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
               placeholder="e.g. 30"
               error={errors.best_before_days}
               validation={{
-                min: { value: 0, message: "Value cannot be negative" }
+                min: { value: 0, message: "Value cannot be negative" },
               }}
             />
           </div>

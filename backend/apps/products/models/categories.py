@@ -34,7 +34,6 @@ class Category(TenantBaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
-    image = CloudinaryField('image', folder='categories/', blank=True, null=True)
 
     # Which store type this category belongs to
     business_type = models.CharField(

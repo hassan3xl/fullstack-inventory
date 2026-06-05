@@ -7,20 +7,25 @@ import {
   BookOpen,
   MessageCircleQuestion,
   ArrowRight,
+  LayoutDashboard,
 } from "lucide-react";
 import { useModal } from "@/providers/ModalProvider";
+import { useAuth } from "@/contexts/AuthContext";
 import LoginForm from "@/components/auth/LoginForm";
 import EnquiryForm from "@/components/enquiry/EnquiryForm";
 import SendMessageForm from "@/components/SendMessageForm";
+import HomeFooter from "@/components/layout/HomeFooter";
 
 export default function LandingPage() {
   const { openModal } = useModal();
+  const { user } = useAuth();
 
   const handleLoginClick = () => {
-    // The LoginForm component already has its own max-w/shadow,
-    // but the modal container adds background/border.
-    // We render it directly, it should look fine.
-    openModal(<LoginForm />);
+    if (user) {
+      window.location.href = "/dashboard";
+    } else {
+      openModal(<LoginForm />);
+    }
   };
 
   const handleEnquiryClick = () => {
@@ -28,16 +33,14 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background relative flex items-center justify-center overflow-hidden">
+    <div className="min-h-screen bg-background relative flex flex-col justify-between overflow-hidden">
       {/* Background Decorative Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-[100px] opacity-50" />
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-500/20 rounded-full blur-[100px] opacity-50" />
 
-      <div className="w-full max-w-5xl mx-auto px-4 py-12 relative z-10">
+      {/* Main Content */}
+      <div className="w-full max-w-5xl mx-auto px-4 py-12 relative z-10 my-auto">
         <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <div className="inline-block px-4 py-1.5 mb-6 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-bold tracking-widest uppercase">
-            Welcome to Quantum Stack
-          </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
             Quantum Stack Inventory
           </h1>
@@ -55,15 +58,19 @@ export default function LandingPage() {
           >
             <div className="h-full bg-card/40 backdrop-blur-md border border-border/50 rounded-lg p-8 hover:bg-card/60 hover:border-primary/50 transition-all duration-300 hover:-translate-y-2 shadow-sm hover:shadow-xl hover:shadow-primary/10 flex flex-col">
               <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform duration-300">
-                <LogIn size={28} />
+                {user ? <LayoutDashboard size={28} /> : <LogIn size={28} />}
               </div>
-              <h3 className="text-2xl font-bold mb-3">Login</h3>
+              <h3 className="text-2xl font-bold mb-3">
+                {user ? "Dashboard" : "Login"}
+              </h3>
               <p className="text-muted-foreground flex-1 mb-8">
-                Access your secure dashboard to manage products, categories, and
-                view real-time statistics.
+                {user
+                  ? "Access your secure dashboard directly to manage products, coordinate staff, and view statistics."
+                  : "Access your secure dashboard to manage products, categories, and view real-time statistics."}
               </p>
               <div className="flex items-center text-primary font-semibold text-sm group-hover:gap-2 transition-all">
-                Access Account <ArrowRight size={16} className="ml-1" />
+                {user ? "Go to Dashboard" : "Access Account"}{" "}
+                <ArrowRight size={16} className="ml-1" />
               </div>
             </div>
           </button>
@@ -109,6 +116,9 @@ export default function LandingPage() {
           </button>
         </div>
       </div>
+
+      {/* Footer containing required legal information */}
+      <HomeFooter />
     </div>
   );
 }

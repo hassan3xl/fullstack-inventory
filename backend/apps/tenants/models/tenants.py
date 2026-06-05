@@ -14,7 +14,6 @@ class Tenant(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    subdomain = models.CharField(max_length=100, unique=True, null=True, blank=True, help_text="e.g., my-shop (optional, for future use)")
     business_type = models.CharField(max_length=50, choices=BusinessType.choices, default=BusinessType.GENERAL)
     logo = CloudinaryField('image', folder='logos/', blank=True, null=True)
     is_active = models.BooleanField(default=True)

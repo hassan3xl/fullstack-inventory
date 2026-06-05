@@ -25,6 +25,7 @@ class Product(TenantBaseModel):
 
     # Status
     is_active = models.BooleanField(default=True)
+    image = CloudinaryField('image', folder='products/', blank=True, null=True)
     
     # Summary Inventory Dates (Aggregated from latest/earliest batch)
     production_date = models.DateField(null=True, blank=True)
@@ -44,8 +45,7 @@ class Product(TenantBaseModel):
 
     @property
     def primary_image_url(self):
-        img = self.images.filter(is_primary=True).first()
-        return img.image.url if img else ""
+        return self.image.url if self.image else ""
 
     @property
     def is_expired(self):
@@ -179,29 +179,3 @@ class ProductInventory(TenantBaseModel):
 
     def __str__(self):
         return f"{self.product.name} - Stock: {self.product.stock}"
-
-
-class ProductImage(TenantBaseModel):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image = CloudinaryField('image', folder='products/')
-    alt_text = models.CharField(max_length=255, blank=True)
-    is_primary = models.BooleanField(default=False)
-    order = models.PositiveIntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['order', '-is_primary', 'created_at']
-
-    def save(self, *args, **kwargs):
-        # If this is set as primary, unset all other primary images for this product
-        if self.is_primary:
-            ProductImage.objects.filter(product=self.product, is_primary=True).update(is_primary=False)
-        
-        # If no primary image exists, make this one primary
-        if not ProductImage.objects.filter(product=self.product, is_primary=True).exists():
-            self.is_primary = True
-            
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.product.name} - Image {self.order}"

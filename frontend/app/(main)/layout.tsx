@@ -1,14 +1,40 @@
-import type { Metadata } from "next";
+"use client";
+
 import Sidebar from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
-
-export const metadata: Metadata = {};
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
+import { BASE_URL } from "@/lib/services/apiService";
+import Loader from "@/components/Loader";
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        window.location.href = "/login";
+      } else if (
+        user.role === "platform_admin" ||
+        user.permissions?.platform_role === "platform_admin"
+      ) {
+      }
+    }
+  }, [user, loading]);
+
+  if (
+    loading ||
+    !user ||
+    user.role === "platform_admin" ||
+    user.permissions?.platform_role === "platform_admin"
+  ) {
+    return <Loader />;
+  }
+
   return (
     <div className="bg-background text-foreground">
       <Navbar />

@@ -24,10 +24,10 @@ export async function handleLogin(user: User, accessToken: string) {
   // Save user data
   cookieStore.set("session_user", JSON.stringify(user), cookieOptions);
 
-  // Save access token securely (httpOnly)
+  // Save access token (not httpOnly so client can read it directly for API requests)
   cookieStore.set("session_access_token", accessToken, {
     ...cookieOptions,
-    httpOnly: true,
+    httpOnly: false,
   });
 }
 
