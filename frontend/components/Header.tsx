@@ -13,7 +13,8 @@ interface StatCardData {
     value: string;
     isPositive: boolean;
   };
-  bg?: string;
+  iconBg?: string;
+  cardBg?: string;
 }
 
 interface HeaderProps {
@@ -25,35 +26,41 @@ interface HeaderProps {
   actions?: React.ReactNode;
 }
 
-const StatCard = ({ title, value, icon, trend, bg }: StatCardData) => {
+const StatCard = ({
+  title,
+  value,
+  icon,
+  trend,
+  iconBg,
+  cardBg,
+}: StatCardData) => {
   return (
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="group relative bg-card p-6 rounded-lg border border-border shadow-xs hover:shadow-md transition-all duration-300"
+      className={`group relative bg-accent/50 ${cardBg} p-6 rounded-2xl border border-border/50 shadow-xs hover:shadow-md transition-all duration-300`}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div
-          className={`p-3 rounded-lg ${bg || "bg-muted"} group-hover:scale-110 transition-transform duration-300 text-foreground`}
-        >
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+          {title}
+        </span>
+        <div className={`p-2.5 rounded-xl ${iconBg || "bg-muted"}`}>{icon}</div>
+      </div>
+
+      <div className="flex items-baseline justify-between mt-2">
+        <h3 className="text-2xl font-black tracking-tight text-foreground">
           {value}
-        </div>
+        </h3>
         {trend && (
           <div
-            className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+            className={`flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
               trend.isPositive
-                ? "bg-emerald-500/10 text-emerald-600"
-                : "bg-red-500/10 text-red-600"
+                ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/10"
+                : "bg-amber-500/10 text-amber-600 border border-amber-500/10"
             }`}
           >
-            <span>{trend.isPositive ? "↑" : "↓"}</span>
             {trend.value}
           </div>
         )}
-      </div>
-      <div>
-        <p className="text-sm font-medium text-muted-foreground mb-1">
-          {title}
-        </p>
       </div>
     </motion.div>
   );

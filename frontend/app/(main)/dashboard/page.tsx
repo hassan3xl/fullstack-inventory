@@ -65,26 +65,29 @@ const DashboardClient = () => {
     {
       title: "Total Products",
       value: productsArray.length.toString(),
-      trend: { value: "In Database", isPositive: true },
-      icon: <Package className="w-5 h-5 text-emerald-500" />,
-      bg: "bg-emerald-500/10",
+      trend: { value: "In Catalog", isPositive: true },
+      icon: <Package className="w-5 h-5 text-primary" />,
+      cardBg: "bg-secondary/20",
+      iconBg: "bg-primary/10",
     },
     {
       title: "Active Products",
       value: activeProducts.toString(),
-      trend: { value: "Live Catalog", isPositive: true },
-      icon: <Package className="w-5 h-5 text-blue-500" />,
-      bg: "bg-blue-500/10",
+      trend: { value: "Live", isPositive: true },
+      icon: <Package className="w-5 h-5 text-secondary" />,
+      cardBg: "bg-accent/20",
+      iconBg: "bg-primary/10",
     },
     {
       title: "Low Stock Items",
       value: (invStats?.low_stock || 0).toString(),
       trend: {
-        value: `${invStats?.out_of_stock || 0} out of stock`,
+        value: `${invStats?.out_of_stock || 0} empty`,
         isPositive: false,
       },
-      icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-      bg: "bg-amber-500/10",
+      icon: <AlertTriangle className="w-5 h-5 text-tertiary" />,
+      cardBg: "bg-accent/50",
+      iconBg: "bg-primary/10",
     },
 
     // Only show expiry stat for store types that track expiry
@@ -95,7 +98,8 @@ const DashboardClient = () => {
             value: (invStats?.near_expiry || 0).toString(),
             trend: { value: "Within 30 days", isPositive: false },
             icon: <Clock className="w-5 h-5 text-red-500" />,
-            bg: "bg-red-500/10",
+            cardBg: "bg-accent/50",
+            iconBg: "bg-primary/10",
           },
         ]
       : []),
@@ -127,10 +131,7 @@ const DashboardClient = () => {
               asChild
               className="shadow-lg shadow-primary/25 rounded-lg px-6"
             >
-              <Link href="/pos">
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Sell Products
-              </Link>
+              <Link href="/pos">Sell Products</Link>
             </Button>
           </>
         }

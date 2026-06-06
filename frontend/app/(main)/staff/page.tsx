@@ -37,10 +37,30 @@ export default function StaffClient() {
         title="Staff Management"
         subtitle="Manage your team members, cashiers, managers, and access permissions."
         stats={[
-          { title: "Total Staff", value: String(totalStaff) },
-          { title: "Admins/Owners", value: String(adminCount) },
-          { title: "Managers", value: String(managerCount) },
-          { title: "Cashiers", value: String(cashierCount) },
+          {
+            title: "Total Staff",
+            value: String(totalStaff),
+            cardBg: "bg-primary/20",
+            iconBg: "bg-primary/10",
+          },
+          {
+            title: "Admins/Owners",
+            value: String(adminCount),
+            cardBg: "bg-accent/10",
+            iconBg: "bg-accent/10",
+          },
+          {
+            title: "Managers",
+            value: String(managerCount),
+            cardBg: "bg-secondary/70 text-white",
+            iconBg: "bg-secondary/10",
+          },
+          {
+            title: "Cashiers",
+            value: String(cashierCount),
+            cardBg: "bg-accent/80",
+            iconBg: "bg-accent/10",
+          },
         ]}
         actions={
           <Button
@@ -102,14 +122,14 @@ export default function StaffClient() {
                   <span
                     className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                       member.role === "owner"
-                        ? "bg-amber-500/10 text-amber-600"
+                        ? "bg-primary/50 text-white"
                         : member.role === "admin"
-                          ? "bg-purple-500/10 text-purple-600"
+                          ? "bg-primary text-white"
                           : member.role === "manager"
-                            ? "bg-indigo-500/10 text-indigo-600"
+                            ? "bg-primary/80 text-white"
                             : member.role === "cashier"
-                              ? "bg-emerald-500/10 text-emerald-600"
-                              : "bg-blue-500/10 text-blue-600"
+                              ? "bg-primary/70 text-white"
+                              : "bg-primary/50 text-white"
                     }`}
                   >
                     <Shield className="w-3 h-3" />
@@ -180,14 +200,14 @@ export default function StaffClient() {
                       <span
                         className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                           member.role === "owner"
-                            ? "bg-amber-500/10 text-amber-600"
+                            ? "bg-accent text-white"
                             : member.role === "admin"
-                              ? "bg-purple-500/10 text-purple-600"
+                              ? "bg-accent"
                               : member.role === "manager"
-                                ? "bg-indigo-500/10 text-indigo-600"
+                                ? "bg-secondary"
                                 : member.role === "cashier"
-                                  ? "bg-emerald-500/10 text-emerald-600"
-                                  : "bg-blue-500/10 text-blue-600"
+                                  ? "bg-primary/50"
+                                  : "bg-muted"
                         }`}
                       >
                         <Shield className="w-3 h-3" />
@@ -222,10 +242,7 @@ export default function StaffClient() {
       </div>
 
       {/* Unified Staff Form for creation */}
-      <StaffForm
-        isModalOpen={isAdding}
-        closeModal={() => setIsAdding(false)}
-      />
+      <StaffForm isModalOpen={isAdding} closeModal={() => setIsAdding(false)} />
 
       {/* Unified Staff Form for editing */}
       <StaffForm

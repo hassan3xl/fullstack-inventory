@@ -3,15 +3,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
-html, body {
-  overflow-x: clip;
-  max-width: 100%;
-}
-
-/* * {
-  outline: 1px solid red;
-} */
-
+/*
+ * Brand: Forest & Gold
+ * Primary: Deep bottle green (#1A3D2B → #2E7D52)
+ * Accent: Warm gold (#B8860B → #D4A017)
+ * Background: Warm off-white (#FAF7F2)
+ *
+ * TODO: Dark theme is temporarily disabled at the ThemeProvider level.
+ * The styling structures (bg-background, text-foreground, and CSS variables)
+ * remain fully intact and active to support future dark mode activation.
+ */
 
 @theme inline {
   --color-background: var(--background);
@@ -54,72 +55,104 @@ html, body {
 }
 
 :root {
+  color-scheme: only light;
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  /* Backgrounds */
+  --background: hsl(40 33% 97%); /* #FAF7F2 warm off-white */
+  --foreground: hsl(153 38% 14%); /* #1A3D2B deep forest */
+
+  /* Cards & Popovers — slightly warmer white */
+  --card: hsl(40 25% 95%); /* #F5F0E8 */
+  --card-foreground: hsl(153 38% 14%);
+  --popover: hsl(40 25% 95%);
+  --popover-foreground: hsl(153 38% 14%);
+
+  /* Primary — deep bottle green */
+  --primary: hsl(153 38% 17%); /* #1A3D2B */
+  --primary-foreground: hsl(40 33% 97%); /* #FAF7F2 */
+
+  /* Secondary — mid green, used for hover/subtle surfaces */
+  --secondary: hsl(153 33% 26%); /* #2E5C3E */
+  --secondary-foreground: hsl(40 33% 97%);
+
+  /* Muted — warm sage tint for disabled/placeholder areas */
+  --muted: hsl(110 15% 88%); /* #DCE5D8 */
+  --muted-foreground: hsl(153 20% 38%); /* #4E7A5E */
+
+  /* Accent — warm gold */
+  --accent: hsl(43 85% 45%); /* #D4A017 */
+  --accent-foreground: hsl(153 38% 14%); /* dark green text on gold */
+
+  /* Destructive */
+  --destructive: hsl(0 72% 51%);
+
+  /* Borders & Inputs — warm green-tinted gray */
+  --border: hsl(140 15% 82%); /* #C8D4C4 */
+  --input: hsl(140 15% 82%);
+  --ring: hsl(153 38% 30%); /* #2E7D52 focus ring */
+
+  /* Charts — harmonious with Forest & Gold */
+  --chart-1: hsl(153 46% 34%); /* mid green */
+  --chart-2: hsl(43 85% 45%); /* gold */
+  --chart-3: hsl(153 38% 17%); /* deep green */
+  --chart-4: hsl(33 70% 52%); /* warm amber */
+  --chart-5: hsl(110 30% 55%); /* light green */
+
+  /* Sidebar */
+  --sidebar: hsl(153 38% 14%); /* #1A3D2B — dark green sidebar */
+  --sidebar-foreground: hsl(40 33% 97%); /* off-white text */
+  --sidebar-primary: hsl(43 85% 45%); /* gold active item */
+  --sidebar-primary-foreground: hsl(153 38% 14%);
+  --sidebar-accent: hsl(153 33% 22%); /* #245C3E hover state */
+  --sidebar-accent-foreground: hsl(40 33% 97%);
+  --sidebar-border: hsl(153 33% 22%); /* subtle divider on dark sidebar */
+  --sidebar-ring: hsl(43 85% 45%); /* gold focus ring on sidebar */
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  color-scheme: only dark;
+
+  --background: hsl(153 30% 8%); /* very dark forest */
+  --foreground: hsl(40 25% 93%); /* warm off-white text */
+
+  --card: hsl(153 28% 12%);
+  --card-foreground: hsl(40 25% 93%);
+  --popover: hsl(153 28% 12%);
+  --popover-foreground: hsl(40 25% 93%);
+
+  --primary: hsl(153 46% 46%); /* brighter green for dark bg */
+  --primary-foreground: hsl(153 38% 8%);
+
+  --secondary: hsl(153 28% 18%);
+  --secondary-foreground: hsl(40 25% 93%);
+
+  --muted: hsl(153 20% 18%);
+  --muted-foreground: hsl(140 15% 60%);
+
+  --accent: hsl(43 80% 52%); /* slightly brighter gold */
+  --accent-foreground: hsl(153 38% 8%);
+
+  --destructive: hsl(0 62.8% 40%);
+
+  --border: hsl(153 20% 22% / 40%);
+  --input: hsl(153 20% 22% / 40%);
+  --ring: hsl(153 46% 46%);
+
+  --chart-1: hsl(153 46% 46%);
+  --chart-2: hsl(43 80% 52%);
+  --chart-3: hsl(153 30% 65%);
+  --chart-4: hsl(33 65% 58%);
+  --chart-5: hsl(110 25% 60%);
+
+  --sidebar: hsl(153 30% 6%);
+  --sidebar-foreground: hsl(40 25% 93%);
+  --sidebar-primary: hsl(43 80% 52%);
+  --sidebar-primary-foreground: hsl(153 38% 8%);
+  --sidebar-accent: hsl(153 28% 14%);
+  --sidebar-accent-foreground: hsl(40 25% 93%);
+  --sidebar-border: hsl(153 20% 16% / 40%);
+  --sidebar-ring: hsl(43 80% 52%);
 }
 
 @layer base {
