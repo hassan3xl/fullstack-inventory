@@ -33,10 +33,10 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   return createPortal(
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/50 animate-in fade-in duration-200"
+        className="fixed inset-0 z-40 bg-black/60 transform-gpu will-change-[opacity] animate-in fade-in duration-200"
         onClick={() => onOpenChange?.(false)}
       />
-      <div className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-full px-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4 transform-gpu">
         {children}
       </div>
     </>,
@@ -53,7 +53,8 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
     <div
       ref={ref}
       className={cn(
-        "grid w-full max-w-lg gap-4 border border-border bg-background p-6 shadow-sm duration-200 animate-in fade-in zoom-in-95 sm:rounded-lg",
+        "relative w-full h-full sm:h-auto max-h-full sm:max-h-[90vh] bg-background text-foreground flex flex-col p-6 overflow-y-auto",
+        "rounded-none sm:rounded-2xl border-0 sm:border border-border shadow-2xl transform-gpu duration-200 animate-in fade-in zoom-in-95",
         className,
       )}
       onClick={(e) => e.stopPropagation()}

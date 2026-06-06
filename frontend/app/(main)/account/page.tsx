@@ -440,7 +440,9 @@ const AccountPage = () => {
                       preferences.
                     </p>
                   </div>
-                  <ThemeSwitcher />
+                  <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground bg-muted px-3 py-2 rounded-lg border border-border/40">
+                    Disabled
+                  </span>
                 </div>
               </CardContent>
             </Card>

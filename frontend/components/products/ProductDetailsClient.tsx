@@ -215,7 +215,7 @@ const ProductDetailsClient = () => {
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Product Image */}
         <div className="space-y-4">
-          <Card className="rounded-xl border-primary/10 shadow-xl shadow-primary/5 overflow-hidden">
+          <Card className="rounded-xl border-primary/10 overflow-hidden">
             <CardContent className="p-6">
               <div className="relative overflow-hidden rounded-lg border border-border bg-muted/20 aspect-square w-full">
                 <Image
@@ -398,7 +398,7 @@ const ProductDetailsClient = () => {
       </div>
 
       {/* Stock Batches Card */}
-      <Card className="rounded-xl border-primary/10 shadow-xl shadow-primary/5 overflow-hidden">
+      <Card className="rounded-xl border-primary/10 overflow-hidden">
         <CardHeader className=" pb-4 flex flex-col md:flex-row items-start md:items-center justify-between">
           <div>
             <CardTitle className="text-xl font-black flex items-center gap-2">
@@ -673,7 +673,7 @@ const ProductDetailsClient = () => {
 
       {/* Asset Management - only visible if user can modify */}
       {canModify && (
-        <Card className="rounded-xl border-primary/10 shadow-xl shadow-primary/5 overflow-hidden relative group">
+        <Card className="rounded-xl border-primary/10 overflow-hidden relative group">
           <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <CardContent className="p-8 relative z-10">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">

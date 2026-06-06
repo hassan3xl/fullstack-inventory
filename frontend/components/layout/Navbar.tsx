@@ -61,7 +61,6 @@ export function Navbar() {
                 <h1 className="text-xl capitalize font-black text-foreground hidden sm:block tracking-tighter">
                   {storeInfo?.name} Inventory
                 </h1>
-              
               </div>
             </Link>
           </div>
