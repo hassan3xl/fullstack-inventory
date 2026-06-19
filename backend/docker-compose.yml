@@ -18,6 +18,19 @@ services:
         reservations:
           memory: 128M
 
+  redis:
+    image: redis:7-alpine
+    container_name: inventory-redis
+    ports:
+      - "6379:6379"
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
   backend:
     build: .
     container_name: inventory-backend
@@ -28,12 +41,14 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DATABASE_URL=postgresql://devuser:dev_password@db:5432/inventory_db
+      - REDIS_URL=redis://redis:6379/1
       - DJANGO_ENV=development
       - DJANGO_SETTINGS_MODULE=src.settings.dev
     ports:
       - "8000:8000"
     depends_on:
       - db
+      - redis
     restart: "always"
     deploy:
       resources:

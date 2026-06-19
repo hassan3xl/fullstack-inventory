@@ -1,6 +1,7 @@
 from rest_framework import permissions
 from apps.tenants.models import TenantUser
 from utils.tenant_context import set_current_tenant
+from apps.tenants.models import TenantSubscription, SubscriptionPlan
 
 
 def resolve_tenant_for_user(request):
@@ -90,3 +91,48 @@ class IsTenantCashier(_RequiresMinRole):
 class IsTenantStaff(HasTenantAccess):
     """Any staff member (all roles)."""
     pass
+
+
+class RequiresSubscriptionFeature(HasTenantAccess):
+    """Permission that checks whether the tenant's active plan enables a given feature.
+
+    Set `required_feature` on a view or subclass to the feature key to check inside
+    `SubscriptionPlan.features` JSON.
+    """
+    required_feature = "customers"
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+
+        tenant = getattr(request, 'tenant', None)
+        if not tenant:
+            return False
+
+        # Look up active subscription for tenant
+        sub = TenantSubscription.plain_objects.filter(tenant=tenant, active=True).first()
+
+        plan = None
+        if sub:
+            plan = sub.plan
+        else:
+            # Fallback: platform default plan
+            plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+
+        if not plan:
+            self.message = "No subscription plan available for this business."
+            return False
+
+        if self.required_feature == "customers":
+            allowed = plan.has_customers
+        elif self.required_feature == "analytics":
+            allowed = plan.has_analytics
+        else:
+            features = plan.features or {}
+            allowed = bool(features.get(self.required_feature, False))
+
+        if not allowed:
+            self.message = f"Your current plan '{plan.name}' does not include access to {self.required_feature}."
+            return False
+
+        return True

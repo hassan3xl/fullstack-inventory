@@ -6,13 +6,13 @@ import { FinanceSkeleton } from "@/components/skeletons/FinanceSkeleton";
 import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 
-export default function Loading() {
+export default function Loader() {
   const pathname = usePathname() || "";
 
-  if (pathname.includes("/dashboard")) {
+  if (pathname.includes("/dashboard") || pathname.includes("subscription")) {
     return <DashboardSkeleton />;
   }
-  
+
   if (pathname.includes("/finance")) {
     return <FinanceSkeleton />;
   }

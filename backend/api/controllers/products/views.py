@@ -18,6 +18,7 @@ from rest_framework.decorators import action
 
 from django.db.models import Sum, F, Q
 from django.utils import timezone
+from rest_framework.pagination import PageNumberPagination
 
 class InventoryStatsView(APIView):
     permission_classes = [IsAuthenticated, HasTenantAccess]
@@ -138,8 +139,28 @@ class CategoryViewSet(viewsets.ModelViewSet):
         })
 
 
+from rest_framework.pagination import PageNumberPagination
+
+class ProductPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
+    # Paginate products: 10 per page by default, allow client override via `page_size` query param
+    class TenPerPagePagination(PageNumberPagination):
+        page_size = 10
+        page_size_query_param = 'page_size'
+        max_page_size = 100
+
+    pagination_class = TenPerPagePagination
+    pagination_class = ProductPagination
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('no_pagination', '').lower() == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -150,6 +171,25 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return ProductCreateSerializer
         return ProductSerializer
+
+    def perform_create(self, serializer):
+        tenant = self.request.tenant
+        
+        # Check active plan limits for product count
+        from apps.tenants.models import TenantSubscription, SubscriptionPlan
+        sub = TenantSubscription.plain_objects.filter(tenant=tenant, active=True).first()
+        plan = sub.plan if sub else SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+        if plan:
+            max_products = plan.max_products
+            if max_products != -1:
+                current_product_count = Product.plain_objects.filter(tenant=tenant).count()
+                if current_product_count >= max_products:
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError({
+                        "detail": f"You have reached the maximum product limit of {max_products} for your current '{plan.name}' plan. Please upgrade your subscription to add more products."
+                    })
+        
+        serializer.save(tenant=tenant)
 
     def get_queryset(self):
         """
@@ -213,6 +253,13 @@ class ProductViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(stock__gt=0, stock__lte=5)
             elif status_param == 'out_of_stock':
                 qs = qs.filter(stock=0)
+
+        # Active status filter
+        if active_status := p.get('active_status'):
+            if active_status == 'active':
+                qs = qs.filter(is_active=True)
+            elif active_status == 'inactive':
+                qs = qs.filter(is_active=False)
 
         return qs.order_by('-created_at')
 

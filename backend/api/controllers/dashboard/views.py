@@ -10,17 +10,65 @@ from utils.resend import EmailSender
 class BusinessProfileAPIView(APIView):
     permission_classes = [IsAuthenticated, HasTenantAccess]
 
-    def get(self, request):
-        tenant = request.tenant
-        return Response({
+    def _get_profile_data(self, tenant):
+        from apps.tenants.models import TenantSubscription, SubscriptionPlan
+        from apps.products.models import Product
+        
+        sub = TenantSubscription.plain_objects.filter(tenant=tenant, active=True).first()
+        if sub:
+            current_plan = {
+                "name": sub.plan.name,
+                "slug": sub.plan.slug,
+                "price": sub.plan.price,
+                "currency": sub.plan.currency,
+                "max_products": sub.plan.max_products,
+                "max_staff": sub.plan.max_staff,
+                "has_customers": sub.plan.has_customers,
+                "has_analytics": sub.plan.has_analytics,
+                "features": sub.plan.features,
+                "ends_at": sub.ends_at,
+                "started_at": sub.started_at,
+                "auto_renew": sub.auto_renew,
+            }
+        else:
+            default_plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+            if default_plan:
+                current_plan = {
+                    "name": default_plan.name,
+                    "slug": default_plan.slug,
+                    "price": default_plan.price,
+                    "currency": default_plan.currency,
+                    "max_products": default_plan.max_products,
+                    "max_staff": default_plan.max_staff,
+                    "has_customers": default_plan.has_customers,
+                    "has_analytics": default_plan.has_analytics,
+                    "features": default_plan.features,
+                    "ends_at": None,
+                    "started_at": tenant.created_at,
+                    "auto_renew": True,
+                }
+            else:
+                current_plan = None
+
+        total_products = Product.plain_objects.filter(tenant=tenant).count()
+        total_staff = tenant.users.count()
+
+        return {
             "id": tenant.id,
             "name": tenant.name,
             "logo": tenant.logo.url if tenant.logo else None,
             "business_type": tenant.business_type,
             "category": tenant.get_business_type_display(),
             "is_active": tenant.is_active,
-            "created_at": tenant.created_at
-        })
+            "created_at": tenant.created_at,
+            "current_plan": current_plan,
+            "total_products": total_products,
+            "total_staff": total_staff,
+        }
+
+    def get(self, request):
+        tenant = request.tenant
+        return Response(self._get_profile_data(tenant))
 
     def patch(self, request):
         tenant = request.tenant
@@ -37,16 +85,10 @@ class BusinessProfileAPIView(APIView):
             if old_name != new_name:
                 from apps.notifications.triggers import NotificationTriggers
                 NotificationTriggers.on_tenant_name_changed(tenant, old_name, new_name, request.user)
-            return Response({
-                "id": tenant.id,
-                "name": tenant.name,
-                "logo": tenant.logo.url if tenant.logo else None,
-                "business_type": tenant.business_type,
-                "category": tenant.get_business_type_display(),
-                "is_active": tenant.is_active,
-                "created_at": tenant.created_at
-            })
+            
+            return Response(self._get_profile_data(tenant))
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class BusinessLogoAPIView(APIView):
     permission_classes = [IsAuthenticated, HasTenantAccess]
@@ -132,6 +174,19 @@ class StaffAddAPIView(APIView):
                 {"error": f"Invalid role. Must be one of: {', '.join(valid_roles)}"},
                 status=400
             )
+
+        # Check active plan limits for staff count
+        from apps.tenants.models import TenantSubscription, SubscriptionPlan
+        sub = TenantSubscription.plain_objects.filter(tenant=tenant, active=True).first()
+        plan = sub.plan if sub else SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+        if plan:
+            max_staff = plan.max_staff
+            if max_staff != -1:
+                current_staff_count = tenant.users.count()
+                if current_staff_count >= max_staff:
+                    return Response({
+                        "error": f"You have reached the maximum staff limit of {max_staff} for your current '{plan.name}' plan. Please upgrade your subscription to add more staff."
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
         from django.contrib.auth import get_user_model
         from django.db import transaction

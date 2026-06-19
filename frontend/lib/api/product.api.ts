@@ -1,9 +1,17 @@
 import { apiService } from "../services/apiService";
 
 export const productApi = {
-  getProducts: async () => {
+  getProducts: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    category?: string;
+    status?: string;
+    no_pagination?: boolean;
+    active_status?: string;
+  }) => {
     try {
-      const res = await apiService.get("/inventory/products/");
+      const res = await apiService.get("/inventory/products/", params);
       return res;
     } catch (error) {
       console.error("Error fetching products:", error);

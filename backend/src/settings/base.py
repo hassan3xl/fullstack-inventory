@@ -159,7 +159,6 @@ STORAGES = {
 
 
 
-
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -238,4 +237,5 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
 FRONTEND_URL = "http://inventory.qstack.com.ng"
 FRONTEND_DOMAIN = "inventory.qstack.com.ng"
 FRONTEND_PROTOCOL = "http"
+
 

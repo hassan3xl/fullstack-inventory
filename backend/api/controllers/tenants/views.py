@@ -9,6 +9,11 @@ from django.contrib.auth import get_user_model
 from utils.resend import EmailSender
 import string
 import random
+from apps.tenants.models import SubscriptionPlan, TenantSubscription
+from apps.tenants.serializers import SubscriptionPlanSerializer, TenantSubscriptionSerializer
+from rest_framework import generics
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.db import transaction
 
 User = get_user_model()
 
@@ -66,6 +71,19 @@ class TenantRegisterAPIView(APIView):
                 # 2. Create Tenant
                 tenant = Tenant.objects.create(name=business_name, business_type=business_type)
 
+                # Assign default free subscription to newly created tenant
+                try:
+                    default_plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+                    if default_plan:
+                        TenantSubscription.plain_objects.create(
+                            tenant=tenant,
+                            plan=default_plan,
+                            active=True,
+                        )
+                except Exception:
+                    # don't block tenant creation if subscription assignment fails
+                    pass
+
                 # 3. Link owner — the registering user becomes the OWNER
                 TenantUser.objects.create(tenant=tenant, user=user, role=TenantUser.Role.OWNER)
 
@@ -119,6 +137,14 @@ class TenantListCreateAPIView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         tenant = serializer.save()
         TenantUser.objects.create(tenant=tenant, user=self.request.user, role=TenantUser.Role.OWNER)
+        # Assign default free subscription on tenant creation
+        try:
+            default_plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+            if default_plan:
+                from apps.tenants.models import TenantSubscription as _TS
+                _TS.plain_objects.create(tenant=tenant, plan=default_plan, active=True)
+        except Exception:
+            pass
 
 
 class TenantDetailAPIView(APIView):
@@ -175,3 +201,46 @@ class TenantUserListAPIView(generics.ListAPIView):
         if not tenant:
             return TenantUser.objects.none()
         return TenantUser.objects.filter(tenant=tenant).select_related('user')
+
+
+class SubscriptionPlanListAPIView(generics.ListAPIView):
+    """List all active subscription plans (public)."""
+    queryset = SubscriptionPlan.objects.filter(is_active=True).order_by('-is_default', 'price')
+    serializer_class = SubscriptionPlanSerializer
+    permission_classes = [AllowAny]
+
+
+class SubscribeTenantAPIView(APIView):
+    """Subscribe the current tenant to a plan.
+
+    POST payload: { plan_slug: string }
+    """
+    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def post(self, request):
+        plan_slug = request.data.get('plan_slug')
+        if not plan_slug:
+            return Response({'detail': 'plan_slug is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            plan = SubscriptionPlan.objects.get(slug=plan_slug, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return Response({'detail': 'Plan not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        tenant = request.tenant
+
+        # Basic Stripe stub: in a real implementation, create a Stripe subscription and return id
+        stripe_subscription_id = f"stub_{tenant.id.hex}_{plan.slug}"
+
+        # Deactivate existing subscriptions and create a new record
+        with transaction.atomic():
+            TenantSubscription.plain_objects.filter(tenant=tenant, active=True).update(active=False)
+            sub = TenantSubscription.plain_objects.create(
+                tenant=tenant,
+                plan=plan,
+                active=True,
+                stripe_subscription_id=stripe_subscription_id,
+            )
+
+        serializer = TenantSubscriptionSerializer(sub)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -36,17 +36,17 @@ export default function RootLayout({
   }
 
   return (
-    <div className="bg-background text-foreground">
+    <div className="h-screen overflow-hidden bg-gray-50 text-foreground">
       <Navbar />
 
-      <div className="flex">
+      <div className="flex mt-12 h-[calc(100vh-4rem)]">
         <Sidebar />
 
-        <div className="flex-1 w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-14 mt-6 min-h-[calc(100vh-3.5rem)] ">
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mt-4 mx-auto px-4 sm:px-6 lg:px-8 py-6">
             {children}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

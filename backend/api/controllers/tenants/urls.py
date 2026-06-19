@@ -5,6 +5,8 @@ from .views import (
     TenantDetailAPIView,
     TenantDashboardAPIView,
     TenantUserListAPIView,
+    SubscribeTenantAPIView,
+    SubscriptionPlanListAPIView,
 )
 
 urlpatterns = [
@@ -13,4 +15,6 @@ urlpatterns = [
     path('me/',        TenantDetailAPIView.as_view(),     name='api-tenant-detail'),
     path('dashboard/', TenantDashboardAPIView.as_view(),  name='api-tenant-dashboard'),
     path('users/',     TenantUserListAPIView.as_view(),   name='api-tenant-users'),
+    path('plans/',     SubscriptionPlanListAPIView.as_view(), name='api-tenant-plans'),
+    path('subscribe/', SubscribeTenantAPIView.as_view(), name='api-tenant-subscribe'),
 ]

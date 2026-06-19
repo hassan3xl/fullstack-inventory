@@ -1,6 +1,8 @@
 from dj_database_url import parse
 import dj_database_url
 import socket
+
+from pytest import Cache
 from .base import *
 import os
 
@@ -23,6 +25,8 @@ from src.config import (
 SECRET_KEY = CONFIG_SECRET_KEY
 ALLOWED_HOSTS = ALLOWED_HOSTS
 ALLOWED_ORIGINS = ALLOWED_ORIGINS
+USE_REDIS_CACHE = os.getenv('USE_REDIS_CACHE')
+
 
 db_url = (
     os.environ.get("DATABASE_URL")
@@ -39,36 +43,28 @@ if db_url and "neon.tech" in db_url:
 
 DATABASES = {
     "default": dj_database_url.config(
-        # default=db_url,
+        # default=db_url,   
         default=os.environ.get("LOCAL_DB"),
         conn_max_age=600,
         ssl_require=ssl_require,
     )
 }
-
-STORAGES = {
-    # Media: Goes to Cloudinary
-    "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-    },
     
-    # Static: Stays local (or use WhiteNoise in production)
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
 
 
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": os.getenv("REDIS_URL", "redis://redis:6379/1"),
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         },
-#     }
-# }
-
+if USE_REDIS_CACHE == True:  # Redis available (production/dev with Redis)
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        }
+    }
+else:  # No Redis — fall back to in-memory (local dev / no Redis deploy)
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
+    }
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 

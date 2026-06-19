@@ -94,13 +94,7 @@
         </div>
         <div class="ml-4 space-y-1">
           <p class="text-sm font-medium leading-none">{{ tenant.name }}</p>
-          <p class="text-sm text-muted-foreground">
-            <a
-              href="http://{{ tenant.subdomain }}.myapp.com"
-              class="hover:text-primary transition-colors hover:underline underline-offset-4"
-              >{{ tenant.subdomain }}.myapp.com</a
-            >
-          </p>
+       
         </div>
         <div class="ml-auto font-medium text-sm">
           {% if tenant.is_active %}

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GoogleLogin, RequestOTPView, VerifyOTPView, ResetPasswordView, TenantLoginView
+from .views import GoogleLogin, RequestOTPView, VerifyOTPView, ResetPasswordView, TenantLoginView, CheckUserView
 from .user_view import AuthenticatedUserView
 from django.urls import include
 from django.views.generic import TemplateView
@@ -24,6 +24,7 @@ urlpatterns = [
     path('otp/request/', RequestOTPView.as_view(), name='otp_request'),
     path('otp/verify/', VerifyOTPView.as_view(), name='otp_verify'),
     path('password-reset/', ResetPasswordView.as_view(), name='password_reset'),
+    path('check-user/', CheckUserView.as_view(), name='check_user'),
     
     # Required by dj-rest-auth to reverse the URL even though we use a custom template
     path('password/reset/confirm/<str:uidb64>/<str:token>/', TemplateView.as_view(), name='password_reset_confirm'),

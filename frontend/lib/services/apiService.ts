@@ -90,7 +90,7 @@ async function fetchWithCatch(
 }
 
 export const apiService = {
-  get: async function (url: string): Promise<any> {
+  get: async function (url: string, params?: Record<string, any>): Promise<any> {
     const token = await getAccessToken();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -98,7 +98,21 @@ export const apiService = {
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    return fetchWithCatch(url, {
+    let finalUrl = url;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== "") {
+          searchParams.append(key, String(val));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        finalUrl += (url.includes("?") ? "&" : "?") + queryString;
+      }
+    }
+
+    return fetchWithCatch(finalUrl, {
       method: "GET",
       credentials: "include",
       headers,

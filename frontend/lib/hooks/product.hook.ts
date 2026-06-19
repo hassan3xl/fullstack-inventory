@@ -7,10 +7,18 @@ import { QUERY_KEYS } from "./queryKeys";
 // --------------------------------------
 // GET ALL PRODUCTS
 // --------------------------------------
-export function useGetProducts() {
-  return useQuery<Product>({
-    queryKey: QUERY_KEYS.PRODUCTS,
-    queryFn: productApi.getProducts,
+export function useGetProducts(params?: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  category?: string;
+  status?: string;
+  no_pagination?: boolean;
+  active_status?: string;
+}) {
+  return useQuery<any>({
+    queryKey: [...QUERY_KEYS.PRODUCTS, params],
+    queryFn: () => productApi.getProducts(params),
     staleTime: 1000 * 60 * 5,
   });
 }
