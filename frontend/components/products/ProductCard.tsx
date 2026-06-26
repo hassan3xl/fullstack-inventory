@@ -93,7 +93,7 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
       1; // Less than 24 hours
 
   return (
-    <div className="bg-card rounded-lg overflow-hidden border border-border hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group relative">
+    <div className="bg-card rounded-md overflow-hidden border border-border hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group relative">
       {/* Status Badge */}
       <div className="absolute top-3 left-3 z-30 flex flex-col gap-2">
         {!product.is_active && (
@@ -136,9 +136,9 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
           <p className="text-[10px] font-black uppercase text-primary/60 tracking-widest mb-1">
             {product.category?.name || "Inventory Item"}
           </p>
-          <h3 className="font-bold text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
+          <p className="font-semibold text-md sm:text-lg leading-tight line-clamp-1 group-hover:text-primary transition-colors">
             {product.name}
-          </h3>
+          </p>
 
           {/* Variants & Capacity Specs */}
           {((product.variants && product.variants.length > 0) ||
@@ -179,24 +179,42 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
         </div>
 
         {/* Pricing Segment */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center sm:justify-between">
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase text-muted-foreground">
               Unit Cost
             </span>
-            <span className="text-xl font-black text-foreground">
+            <span className="textmd md:text-xl font-black text-foreground">
               {formatNaira(product.unit_price)}
             </span>
           </div>
-          <div className="text-right flex flex-col">
+          <div className="md:text-right pt-4 md:mt-0 flex flex-col">
             <span className="text-[10px] font-black uppercase text-muted-foreground">
               Stock Level
             </span>
             <span
               className={`text-lg font-black ${isOutOfStock ? "text-red-500" : isLowStock ? "text-orange-500" : "text-emerald-500"}`}
             >
-              {stockCount} <span className="text-[10px] uppercase">units</span>
+              {stockCount}{" "}
+              <span className="text-[10px] uppercase">
+                {product.base_unit || "units"}
+              </span>
             </span>
+            {product.units_per_pack &&
+              product.units_per_pack > 1 &&
+              stockCount > 0 && (
+                <span className="text-[9px] font-bold text-muted-foreground leading-tight mt-0.5">
+                  ({Math.floor(stockCount / product.units_per_pack)}{" "}
+                  {product.pack_unit || "Box"}
+                  {Math.floor(stockCount / product.units_per_pack) !== 1
+                    ? "s"
+                    : ""}
+                  {stockCount % product.units_per_pack > 0
+                    ? ` + ${stockCount % product.units_per_pack} loose`
+                    : ""}
+                  )
+                </span>
+              )}
           </div>
         </div>
 
@@ -209,7 +227,7 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
         </div>
 
         {/* Actions section */}
-        <div className="flex gap-2 mt-4 pt-2 border-t border-border/30">
+        <div className="flex flex-col md:flex-row gap-2 mt-4 pt-2 border-t border-border/30">
           <Button
             type="button"
             onClick={(e) => {
@@ -219,8 +237,7 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
             variant="outline"
             className="flex-1 rounded-xl py-2 h-10 font-bold flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-[0.98] cursor-pointer text-xs"
           >
-            <Eye size={14} />
-            View Info
+            View product
           </Button>
           {(!!user?.permissions?.is_staff ||
             !!user?.permissions?.store_role) && (

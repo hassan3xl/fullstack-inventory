@@ -33,6 +33,40 @@ import AddProductImageModal from "@/components/products/AddProductImageModal";
 import ReceiveBatchModal from "@/components/products/ReceiveBatchModal";
 import EditBatchModal from "@/components/products/EditBatchModal";
 
+const formatBatchQuantity = (qty: number, initialQty: number, baseUnit: string, packUnit: string, factor: number) => {
+  if (factor && factor > 1) {
+    const packs = Math.floor(qty / factor);
+    const loose = qty % factor;
+    const initPacks = Math.floor(initialQty / factor);
+    const initLoose = initialQty % factor;
+    
+    let currentStr = `${packs} ${packUnit}${packs !== 1 ? 's' : ''}`;
+    if (loose > 0) {
+      currentStr += ` & ${loose} ${baseUnit}${loose !== 1 ? 's' : ''}`;
+    }
+    
+    let initialStr = `${initPacks} ${packUnit}${initPacks !== 1 ? 's' : ''}`;
+    if (initLoose > 0) {
+      initialStr += ` & ${initLoose} ${baseUnit}${initLoose !== 1 ? 's' : ''}`;
+    }
+    
+    return (
+      <div className="space-y-0.5">
+        <span className="font-bold text-foreground">{currentStr}</span>
+        <span className="text-muted-foreground text-[10px] block font-medium">
+          Initial: {initialStr} ({qty} total {baseUnit}s)
+        </span>
+      </div>
+    );
+  }
+  
+  return (
+    <span>
+      {qty} <span className="text-muted-foreground text-xs">/ {initialQty} {baseUnit}s</span>
+    </span>
+  );
+};
+
 const ProductDetailsClient = () => {
   const { user } = useAuth();
   const permissions = user?.permissions;
@@ -364,9 +398,22 @@ const ProductDetailsClient = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-black mb-1">{stockCount}</div>
-                <p className="text-xs text-muted-foreground uppercase font-bold tracking-tight">
-                  units currently available
+                <div className="text-3xl font-black mb-1 text-foreground leading-tight">
+                  {product.units_per_pack && product.units_per_pack > 1 ? (
+                    <>
+                      {Math.floor(stockCount / product.units_per_pack)} {product.pack_unit || "Box"}{Math.floor(stockCount / product.units_per_pack) !== 1 ? "s" : ""}
+                      {stockCount % product.units_per_pack > 0 && (
+                        <span className="text-xl font-normal text-muted-foreground ml-2">
+                          & {stockCount % product.units_per_pack} {product.base_unit || "Piece"}{stockCount % product.units_per_pack !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    `${stockCount} ${product.base_unit || "Piece"}${stockCount !== 1 ? "s" : ""}`
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
+                  Total: {stockCount} {product.base_unit || "Piece"}{stockCount !== 1 ? "s" : ""} available
                 </p>
 
                 <div className="mt-4 pt-4 border-t border-border">
@@ -462,16 +509,19 @@ const ProductDetailsClient = () => {
 
                     {/* Middle row: Quantity & Days Left */}
                     <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
+                      <div className="col-span-2 sm:col-span-1">
                         <p className="text-muted-foreground font-semibold">
                           Quantity
                         </p>
-                        <p className="font-bold text-foreground mt-0.5">
-                          {batch.quantity}{" "}
-                          <span className="text-muted-foreground font-medium">
-                            / {batch.initial_quantity} units
-                          </span>
-                        </p>
+                        <div className="mt-1">
+                          {formatBatchQuantity(
+                            batch.quantity,
+                            batch.initial_quantity,
+                            product.base_unit || "Piece",
+                            product.pack_unit || "Box",
+                            product.units_per_pack || 1
+                          )}
+                        </div>
                       </div>
                       <div>
                         <p className="text-muted-foreground font-semibold">
@@ -563,7 +613,7 @@ const ProductDetailsClient = () => {
                     <tr className="bg-muted/50 border-b border-border/50 text-[10px] uppercase font-black tracking-wider text-muted-foreground">
                       <th className="px-6 py-4">Batch Number</th>
                       <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Quantity</th>
+                      <th className="px-6 py-4">{product.units_per_pack && product.units_per_pack > 1 ? `${product.pack_unit}s & ${product.base_unit}s` : "Quantity"}</th>
                       <th className="px-6 py-4">Production Date</th>
                       <th className="px-6 py-4">Expiry Date</th>
                       <th className="px-6 py-4">Days Left</th>
@@ -599,10 +649,13 @@ const ProductDetailsClient = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 font-semibold text-sm">
-                          {batch.quantity}{" "}
-                          <span className="text-muted-foreground text-xs">
-                            / {batch.initial_quantity} units
-                          </span>
+                          {formatBatchQuantity(
+                            batch.quantity,
+                            batch.initial_quantity,
+                            product.base_unit || "Piece",
+                            product.pack_unit || "Box",
+                            product.units_per_pack || 1
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
                           {batch.production_date
@@ -766,6 +819,9 @@ const ProductDetailsClient = () => {
       <ReceiveBatchModal
         productId={product.id}
         productName={product.name}
+        baseUnit={product.base_unit || "Piece"}
+        packUnit={product.pack_unit || "Box"}
+        unitsPerPack={product.units_per_pack || 1}
         isModalOpen={showReceiveModal}
         closeModal={() => setShowReceiveModal(false)}
         onBatchReceived={() => refetch()}
@@ -774,6 +830,9 @@ const ProductDetailsClient = () => {
         <EditBatchModal
           productId={product.id}
           batch={selectedBatch}
+          baseUnit={product.base_unit || "Piece"}
+          packUnit={product.pack_unit || "Box"}
+          unitsPerPack={product.units_per_pack || 1}
           isModalOpen={showEditBatchModal}
           closeModal={() => {
             setShowEditBatchModal(false);

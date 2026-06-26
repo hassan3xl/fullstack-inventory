@@ -22,10 +22,10 @@ interface BaseModalProps {
 }
 
 const sizeClasses = {
-  sm: "sm:max-w-md",
-  md: "sm:max-w-lg",
-  lg: "sm:max-w-2xl",
-  xl: "sm:max-w-4xl",
+  sm: "sm:max-w-md md:max-w-lg",
+  md: "sm:max-w-lg md:max-w-2xl lg:max-w-3xl",
+  lg: "sm:max-w-2xl md:max-w-4xl lg:max-w-5xl",
+  xl: "sm:max-w-4xl md:max-w-6xl lg:max-w-[85vw] xl:max-w-[75vw]",
 };
 
 const BaseModal: React.FC<BaseModalProps> = ({
@@ -52,12 +52,17 @@ const BaseModal: React.FC<BaseModalProps> = ({
   }, [isOpen, onClose]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <DialogContent
         className={cn(
-          "relative w-full h-full sm:h-auto bg-card flex flex-col p-0 gap-0 overflow-hidden",
+          "relative md:mt-8 w-full h-full sm:h-auto bg-card flex flex-col p-0 gap-0 overflow-hidden",
           "max-h-full sm:max-h-[90vh] rounded-none sm:rounded-2xl border-0 sm:border border-border shadow-2xl mx-auto",
-          sizeClasses[size]
+          sizeClasses[size],
         )}
       >
         {/* ── Header ─────────────────────────────────────────── */}
@@ -98,9 +103,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
             <kbd className="px-2 py-1 bg-background border border-border rounded text-[10px] font-semibold text-muted-foreground">
               Esc
             </kbd>
-            <span className="text-[11px] text-muted-foreground">
-              to close
-            </span>
+            <span className="text-[11px] text-muted-foreground">to close</span>
           </div>
         )}
       </DialogContent>

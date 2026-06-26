@@ -17,7 +17,7 @@ def tenant(db):
     from apps.tenants.models import Tenant   # adjust import if needed
     return Tenant.objects.create(
         name="Test Business",
-        business_type="grocery",
+        business_type="general",
     )
 
 
@@ -27,7 +27,6 @@ def tenant(db):
 @pytest.fixture
 def user(db, tenant):
     return User.objects.create_user(
-        username="testuser",
         password="pass123",
         email="test@example.com",
     )
@@ -44,11 +43,11 @@ def auth_client(client, user):
 # ─────────────────────────────────────────────
 @pytest.fixture
 def category(db, tenant):
-    from apps.products.categories import Category   # adjust import if needed
+    from apps.products.models.categories import Category   # adjust import if needed
     return Category.objects.create(
         tenant=tenant,
         name="Beverages",
-        business_type="grocery",
+        business_type="general",
         expiry_strategy="STABLE",
         default_best_before_days=365,
     )
@@ -57,7 +56,7 @@ def category(db, tenant):
 @pytest.fixture
 def category_no_expiry(db, tenant):
     """A category with no default best_before_days (electronics, clothing etc.)"""
-    from apps.products.categories import Category
+    from apps.products.models.categories import Category
     return Category.objects.create(
         tenant=tenant,
         name="Electronics",

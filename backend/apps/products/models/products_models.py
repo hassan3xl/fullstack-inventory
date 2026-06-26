@@ -18,6 +18,10 @@ class Product(TenantBaseModel):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
     stock = models.PositiveIntegerField(default=0, help_text="Total stock across all batches")
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    pack_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Optional bulk selling price for a whole pack. If blank, defaults to unit_price * units_per_pack.")
+    base_unit = models.CharField(max_length=50, default='Piece', help_text="The smallest unit sold, e.g., Piece, Bottle, Single")
+    pack_unit = models.CharField(max_length=50, default='Box', help_text="The stocking/purchase packaging unit, e.g., Crate, Dozen, Carton, Box")
+    units_per_pack = models.PositiveIntegerField(default=1, help_text="Number of base units in one pack (e.g., 12 for dozen, 24 for crate)")
     variants = models.JSONField(default=list, blank=True, null=True, help_text="Available variants/colors")
     capacities = models.JSONField(default=list, blank=True, null=True, help_text="Available capacities and prices e.g. [{name:'1L', price:500}]")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -26,6 +30,18 @@ class Product(TenantBaseModel):
     # Status
     is_active = models.BooleanField(default=True)
     image = CloudinaryField('image', folder='products/', blank=True, null=True)
+
+    @property
+    def stock_in_packs(self):
+        if self.units_per_pack and self.units_per_pack > 1:
+            return self.stock // self.units_per_pack
+        return 0
+
+    @property
+    def stock_loose(self):
+        if self.units_per_pack and self.units_per_pack > 1:
+            return self.stock % self.units_per_pack
+        return self.stock
     
     # Summary Inventory Dates (Aggregated from latest/earliest batch)
     production_date = models.DateField(null=True, blank=True)
@@ -120,6 +136,18 @@ class StockBatch(TenantBaseModel):
     
     production_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
+
+    @property
+    def quantity_in_packs(self):
+        if self.product.units_per_pack and self.product.units_per_pack > 1:
+            return self.quantity // self.product.units_per_pack
+        return 0
+
+    @property
+    def quantity_loose(self):
+        if self.product.units_per_pack and self.product.units_per_pack > 1:
+            return self.quantity % self.product.units_per_pack
+        return self.quantity
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

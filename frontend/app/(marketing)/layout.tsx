@@ -6,6 +6,7 @@ import { Menu, X, ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import HomeFooter from "@/components/layout/HomeFooter";
+import Image from "next/image";
 
 export default function MarketingLayout({
   children,
@@ -28,12 +29,13 @@ export default function MarketingLayout({
             href="/"
             className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
           >
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-lg">
-              Q
-            </div>
-            <span className="font-black text-md sm:text-lg tracking-tight uppercase text-foreground">
-              Quantum Stack Inventory
-            </span>
+            <Image
+              src="/images/logo.svg"
+              alt="Q"
+              width={32}
+              height={32}
+              className="rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-lg"
+            />
           </Link>
 
           {/* Desktop Navigation Links */}

@@ -5,7 +5,6 @@ from cloudinary.models import CloudinaryField
 
 class Tenant(models.Model):
     class BusinessType(models.TextChoices):
-        GROCERY = 'grocery', 'Grocery Store'
         PHARMACY = 'pharmacy', 'Pharmacy & Medicine'
         ELECTRONICS = 'electronics', 'Electronics & Gadgets'
         CLOTHING = 'clothing', 'Clothing & Apparel'
@@ -13,10 +12,29 @@ class Tenant(models.Model):
         OTHER = 'other', 'Other'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    store_id = models.CharField(max_length=64, unique=True, blank=True, null=True)
+    parent_enterprise_tenant = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='linked_premium_stores'
+    )
     name = models.CharField(max_length=255)
     business_type = models.CharField(max_length=50, choices=BusinessType.choices, default=BusinessType.GENERAL)
     logo = CloudinaryField('image', folder='logos/', blank=True, null=True)
+    class StatusChoices(models.TextChoices):
+        PENDING = 'pending', 'Pending Check'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.PENDING
+    )
     is_active = models.BooleanField(default=True)
+    email_notifications_enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     @property
@@ -28,11 +46,28 @@ class Tenant(models.Model):
 
     @property
     def is_pending(self):
-        user = self.principal_user
-        return user is not None and not user.is_active
+        return self.status == self.StatusChoices.PENDING
+
+    @property
+    def current_plan(self):
+        from apps.tenants.models.subscriptions import TenantSubscription
+        target_tenant = self.parent_enterprise_tenant if self.parent_enterprise_tenant else self
+        sub = TenantSubscription.plain_objects.filter(tenant=target_tenant, active=True).first()
+        return sub.plan if sub else None
 
     class Meta:
         db_table = "tenants"
+
+    def save(self, *args, **kwargs):
+        if not self.store_id:
+            import random
+            import string
+            while True:
+                new_id = "STORE-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                if not Tenant.objects.filter(store_id=new_id).exists():
+                    self.store_id = new_id
+                    break
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

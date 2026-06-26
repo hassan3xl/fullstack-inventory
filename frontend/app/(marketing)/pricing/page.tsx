@@ -301,7 +301,7 @@ export default function PricingPage() {
 
                 <p className="text-[11px] text-muted-foreground leading-relaxed min-h-[40px] mb-6">
                   {plan.slug === "plus"
-                    ? "Great for growing grocery stores, pharmacies, and general retail."
+                    ? "Great for growing pharmacies, electronics outlets, clothing boutiques, and general retail."
                     : plan.slug === "pro"
                       ? "Advanced tools for high-volume and multi-register storefronts."
                       : "Complete scale operations and customized enterprise solutions."}

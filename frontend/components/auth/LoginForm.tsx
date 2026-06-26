@@ -166,39 +166,17 @@ export default function LoginForm() {
         {/* When in password step show readonly email summary and password field */}
         {step === "password" && (
           <div className="space-y-4">
-            <div className="bg-muted/10 p-3 rounded-md flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Mail size={18} className="text-muted-foreground" />
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    Signing in as
-                  </div>
-                  <div className="font-medium">{emailValue}</div>
-                </div>
-              </div>
+            <label htmlFor="email" className="text-sm font-medium">
+              Email Address
+            </label>
+            <div className="flex rounded-md border border-border px-3 py-2 cursor-not-allowed bg-gray-50 items-center gap-3">
+              <Mail size={18} className="text-muted-foreground" />
               <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // allow user to re-validate a different email
-                    setStep("email");
-                    setAllowLoginMeta(null);
-                    setEmailValue("");
-                    setLastCheckedEmail(null);
-                    setLastCheckResp(null);
-                    reset();
-                  }}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Use different email
-                </button>
+                <div className="font-medium">{emailValue}</div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
               <Input
                 icon={Key}
                 name="password"

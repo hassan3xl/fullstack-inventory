@@ -37,22 +37,22 @@ const StatCard = ({
   return (
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className={`group relative bg-accent/50 ${cardBg} p-6 rounded-2xl border border-border/50 shadow-xs hover:shadow-md transition-all duration-300`}
+      className={`group relative bg-secondary/10 ${cardBg} p-4 sm:p-6 rounded-2xl border border-border/50 shadow-xs hover:shadow-md transition-all duration-300`}
     >
-      <div className="flex justify-between items-center mb-4">
-        <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+      <div className="flex justify-between items-center mb-3 sm:mb-4">
+        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-primary truncate max-w-[70%]">
           {title}
         </span>
-        <div className={`p-2.5 rounded-xl ${iconBg || "bg-muted"}`}>{icon}</div>
+        <div className={`p-1.5 sm:p-2.5 rounded-xl shrink-0 ${iconBg || "bg-muted"}`}>{icon}</div>
       </div>
 
       <div className="flex items-baseline justify-between mt-2">
-        <h3 className="text-2xl font-black tracking-tight text-foreground">
+        <h3 className="text-lg sm:text-2xl font-black tracking-tight text-foreground truncate">
           {value}
         </h3>
         {trend && (
           <div
-            className={`flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+            className={`flex items-center gap-0.5 text-[8px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
               trend.isPositive
                 ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/10"
                 : "bg-amber-500/10 text-amber-600 border border-amber-500/10"
@@ -115,11 +115,11 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Stats Section */}
       {stats && stats.length > 0 && (
         <div
-          className={`grid grid-cols-1 sm:grid-cols-2 ${
+          className={`grid grid-cols-2 sm:grid-cols-2 ${
             stats.length > 2
               ? "lg:grid-cols-2 xl:grid-cols-4"
               : "lg:grid-cols-" + stats.length
-          } gap-6`}
+          } gap-4 sm:gap-6`}
         >
           {stats.map((stat, index) => (
             <StatCard key={index} {...stat} />

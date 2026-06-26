@@ -93,16 +93,29 @@ class NotificationTriggers:
             action_url="https://inventory.qstack.com.ng/inventory/products",
             channels=[NotificationChannel.IN_APP],
         )
+
+    @staticmethod
+    def on_product_updated(tenant, product_name: str, updated_by: str):
+        """Send notification when product is updated"""
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="Product Updated",
+            message=f"Product '{product_name}' has been updated by {updated_by}.",
+            category="product_updated",
+            action_url="https://inventory.qstack.com.ng/inventory/products",
+            channels=[NotificationChannel.IN_APP],
+        )
     
     @staticmethod
     def on_product_stock_low(tenant, product_name: str, current_stock: int):
         """Send notification when product stock is low"""
+        from apps.tenants.models import TenantUser
         return NotificationService.send_notification_to_tenant_users(
             tenant=tenant,
             title="Low Stock Alert",
-            message=f"Product '{product_name}' has low stock (Current: {current_stock} units). "
-                   f"Consider restocking soon.",
+            message=f"Product '{product_name}' has low stock (Current: {current_stock} units). Consider restocking soon.",
             category="stock_low",
+            roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
             action_url="https://inventory.qstack.com.ng/inventory/products",
             channels=[NotificationChannel.IN_APP],
         )
@@ -110,12 +123,13 @@ class NotificationTriggers:
     @staticmethod
     def on_product_out_of_stock(tenant, product_name: str):
         """Send notification when product is out of stock"""
+        from apps.tenants.models import TenantUser
         return NotificationService.send_notification_to_tenant_users(
             tenant=tenant,
             title="Out of Stock",
-            message=f"Product '{product_name}' is now out of stock. "
-                   f"Customers will not be able to purchase this item.",
+            message=f"Product '{product_name}' is now out of stock. Customers will not be able to purchase this item.",
             category="out_of_stock",
+            roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
             action_url="https://inventory.qstack.com.ng/inventory/products",
             channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
         )
@@ -125,13 +139,103 @@ class NotificationTriggers:
         """Send notification when product is deleted"""
         return NotificationService.send_notification_to_tenant_users(
             tenant=tenant,
-            title="🗑️ Product Removed",
+            title="Product Removed",
             message=f"Product '{product_name}' has been removed by {deleted_by}.",
             category="product_deleted",
             channels=[NotificationChannel.IN_APP],
         )
-    
+
+    # ============ CATEGORY MANAGEMENT ============
+
+    @staticmethod
+    def on_category_created(tenant, category_name: str, created_by: str):
+        """Send notification when category is created"""
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="New Category Created",
+            message=f"Category '{category_name}' has been created by {created_by}.",
+            category="category_created",
+            channels=[NotificationChannel.IN_APP],
+        )
+
+    @staticmethod
+    def on_category_updated(tenant, old_name: str, new_name: str, updated_by: str):
+        """Send notification when category is updated"""
+        message = f"Category '{old_name}' has been updated to '{new_name}' by {updated_by}." if old_name != new_name else f"Category '{old_name}' details have been updated by {updated_by}."
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="Category Updated",
+            message=message,
+            category="category_updated",
+            channels=[NotificationChannel.IN_APP],
+        )
+
+    @staticmethod
+    def on_category_deleted(tenant, category_name: str, deleted_by: str):
+        """Send notification when category is deleted"""
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="Category Removed",
+            message=f"Category '{category_name}' has been deleted by {deleted_by}.",
+            category="category_deleted",
+            channels=[NotificationChannel.IN_APP],
+        )
+
+    # ============ BATCH & ARRIVALS ============
+
+    @staticmethod
+    def on_batch_received(tenant, product_name: str, batch_number: str, quantity: int, received_by: str):
+        """Send notification when stock batch is received"""
+        from apps.tenants.models import TenantUser
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="Stock Batch Received",
+            message=f"A new batch '{batch_number}' of {quantity} units for '{product_name}' was received by {received_by}.",
+            category="batch_received",
+            roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
+            channels=[NotificationChannel.IN_APP],
+        )
+
+    @staticmethod
+    def on_batch_updated(tenant, product_name: str, batch_number: str, quantity: int, updated_by: str):
+        """Send notification when stock batch is updated"""
+        from apps.tenants.models import TenantUser
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="Stock Batch Updated",
+            message=f"Batch '{batch_number}' of '{product_name}' was updated to {quantity} units by {updated_by}.",
+            category="batch_updated",
+            roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
+            channels=[NotificationChannel.IN_APP],
+        )
+
+    @staticmethod
+    def on_batch_deleted(tenant, product_name: str, batch_number: str, deleted_by: str):
+        """Send notification when stock batch is deleted"""
+        from apps.tenants.models import TenantUser
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="Stock Batch Deleted",
+            message=f"Batch '{batch_number}' of '{product_name}' was deleted by {deleted_by}.",
+            category="batch_deleted",
+            roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
+            channels=[NotificationChannel.IN_APP],
+        )
+
     # ============ SALES & ORDERS ============
+
+    @staticmethod
+    def on_sale_created(tenant, sale_number: str, total: float, cashier_name: str):
+        """Send notification when a sale is completed"""
+        from apps.tenants.models import TenantUser
+        return NotificationService.send_notification_to_tenant_users(
+            tenant=tenant,
+            title="New Sale Processed",
+            message=f"Sale {sale_number} processed by {cashier_name} for ₦{total:,.2f}.",
+            category="sale_created",
+            roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
+            channels=[NotificationChannel.IN_APP],
+        )
     
     @staticmethod
     def on_order_created(tenant, order_id: str, total: float):
@@ -139,8 +243,7 @@ class NotificationTriggers:
         return NotificationService.send_notification_to_tenant_users(
             tenant=tenant,
             title="New Order",
-            message=f"New order #{order_id} received (Total: ₦{total:,.2f}). "
-                   f"Click to view details.",
+            message=f"New order #{order_id} received (Total: ₦{total:,.2f}). Click to view details.",
             category="order_created",
             action_url=f"https://inventory.qstack.com.ng/sales/orders/{order_id}",
             channels=[NotificationChannel.IN_APP],
@@ -173,6 +276,50 @@ class NotificationTriggers:
             channels=[NotificationChannel.IN_APP],
         )
     
+    # ============ EXPIRY CHECKS ============
+
+    @staticmethod
+    def check_and_trigger_expiry_notifications(tenant):
+        """Check for expired or expiring products and trigger notifications"""
+        from django.utils import timezone
+        from apps.products.models import Product
+        from apps.tenants.models import TenantUser
+        
+        now = timezone.now().date()
+        
+        # 1. Expired products
+        expired_products = Product.objects.filter(
+            tenant=tenant,
+            expiry_date__lt=now,
+            stock__gt=0
+        )
+        for product in expired_products:
+            NotificationService.send_notification_to_tenant_users(
+                tenant=tenant,
+                title="Expired Product Alert",
+                message=f"Product '{product.name}' has expired on {product.expiry_date} but still has {product.stock} units in stock.",
+                category="product_expired",
+                roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
+                channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+            )
+            
+        # 2. Near expiry (expiring in less than 30 days)
+        near_expiry_products = Product.objects.filter(
+            tenant=tenant,
+            expiry_date__range=[now, now + timezone.timedelta(days=30)],
+            stock__gt=0
+        )
+        for product in near_expiry_products:
+            days_left = (product.expiry_date - now).days
+            NotificationService.send_notification_to_tenant_users(
+                tenant=tenant,
+                title="Near Expiry Alert",
+                message=f"Product '{product.name}' is expiring in {days_left} days (Expiry: {product.expiry_date}).",
+                category="product_near_expiry",
+                roles=[TenantUser.Role.OWNER, TenantUser.Role.ADMIN, TenantUser.Role.MANAGER],
+                channels=[NotificationChannel.IN_APP],
+            )
+    
     # ============ USER MANAGEMENT ============
     
     @staticmethod
@@ -181,8 +328,7 @@ class NotificationTriggers:
         return NotificationService.send_notification(
             user=user,
             title="Password Changed",
-            message="Your password has been successfully changed. "
-                   "If you didn't make this change, please reset your password immediately.",
+            message="Your password has been successfully changed. If you didn't make this change, please reset your password immediately.",
             category="password_changed",
             channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
         )
@@ -206,8 +352,7 @@ class NotificationTriggers:
         return NotificationService.send_bulk_notification(
             users=users_list,
             title="Scheduled Maintenance",
-            message=f"We'll be performing scheduled maintenance on {maintenance_time}. "
-                   f"The system may be temporarily unavailable during this time.",
+            message=f"We'll be performing scheduled maintenance on {maintenance_time}. The system may be temporarily unavailable during this time.",
             category="maintenance_scheduled",
             channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
         )
@@ -216,7 +361,7 @@ class NotificationTriggers:
     def on_system_alert(users_list, alert_message: str, severity: str = "info"):
         """Send system alert notifications"""
         title_map = {
-            "info": "ℹSystem Notification",
+            "info": "System Notification",
             "warning": "Warning",
             "critical": "Critical Alert",
         }

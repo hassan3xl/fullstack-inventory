@@ -8,6 +8,7 @@ export type CartItem = {
   name: string;
   unit_price: number;
   base_unit_price: number;
+  pack_price?: number | null;
   quantity: number;
   stock: number;
   sku: string;
@@ -15,6 +16,10 @@ export type CartItem = {
   selectedVariant?: string;
   capacities?: Array<{ name: string; price?: number | null }>;
   selectedCapacity?: string;
+  sell_unit: "loose" | "pack";
+  units_per_pack: number;
+  base_unit: string;
+  pack_unit: string;
 };
 
 interface CartContextType {
@@ -23,6 +28,7 @@ interface CartContextType {
   updateQuantity: (itemId: string, amount: number) => void;
   updateVariant: (itemId: string, variant: string) => void;
   updateCapacity: (itemId: string, capacity: string) => void;
+  updateSellUnit: (itemId: string, sellUnit: "loose" | "pack") => void;
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
 }
@@ -65,9 +71,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     setCart((prevCart) => {
       const existing = prevCart.find((item) => item.id === product.id);
       if (existing) {
-        if (existing.quantity >= stock) {
+        const multiplier =
+          existing.sell_unit === "pack" && existing.units_per_pack > 1
+            ? existing.units_per_pack
+            : 1;
+        const totalRequestedPieces = (existing.quantity + 1) * multiplier;
+
+        if (totalRequestedPieces > stock) {
+          const maxAvailable = Math.floor(stock / multiplier);
           toast.warning("Limit Reached", {
-            description: `Only ${stock} units of "${product.name}" are available in stock.`,
+            description: `Only ${maxAvailable} ${existing.sell_unit === "pack" ? existing.pack_unit : existing.base_unit}s available in stock.`,
           });
           return prevCart;
         }
@@ -92,6 +105,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           name: product.name,
           unit_price,
           base_unit_price,
+          pack_price: product.pack_price ? Number(product.pack_price) : null,
           quantity: 1,
           stock,
           sku: product.inventory?.sku || "N/A",
@@ -99,6 +113,10 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           selectedVariant: product.variants && product.variants.length > 0 ? product.variants[0] : undefined,
           capacities,
           selectedCapacity,
+          sell_unit: "loose",
+          units_per_pack: product.units_per_pack ?? 1,
+          base_unit: product.base_unit || "Piece",
+          pack_unit: product.pack_unit || "Box",
         },
       ];
     });
@@ -111,9 +129,17 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
           if (item.id === itemId) {
             const nextQty = item.quantity + amount;
             if (nextQty <= 0) return null;
-            if (nextQty > item.stock) {
+
+            const multiplier =
+              item.sell_unit === "pack" && item.units_per_pack > 1
+                ? item.units_per_pack
+                : 1;
+            const totalRequestedPieces = nextQty * multiplier;
+
+            if (totalRequestedPieces > item.stock) {
+              const maxAvailable = Math.floor(item.stock / multiplier);
               toast.warning("Limit Reached", {
-                description: `Only ${item.stock} units available in stock.`,
+                description: `Only ${maxAvailable} ${item.sell_unit === "pack" ? item.pack_unit : item.base_unit}s available in stock.`,
               });
               return item;
             }
@@ -138,11 +164,53 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       return prevCart.map((item) => {
         if (item.id === itemId) {
           const capObj = item.capacities?.find((c) => c.name === capacity);
-          const unit_price = (capObj && capObj.price) ? Number(capObj.price) : item.base_unit_price;
+          const base_price = (capObj && capObj.price) ? Number(capObj.price) : item.base_unit_price;
+          const multiplier =
+            item.sell_unit === "pack" && item.units_per_pack > 1
+              ? item.units_per_pack
+              : 1;
+          const unit_price =
+            item.sell_unit === "pack" && item.pack_price
+              ? Number(item.pack_price)
+              : base_price * multiplier;
           return {
             ...item,
             selectedCapacity: capacity,
-            unit_price
+            unit_price,
+          };
+        }
+        return item;
+      });
+    });
+  };
+
+  const updateSellUnit = (itemId: string, sellUnit: "loose" | "pack") => {
+    setCart((prevCart) => {
+      return prevCart.map((item) => {
+        if (item.id === itemId) {
+          const capObj = item.capacities?.find((c) => c.name === item.selectedCapacity);
+          const base_price = (capObj && capObj.price) ? Number(capObj.price) : item.base_unit_price;
+          const multiplier =
+            sellUnit === "pack" && item.units_per_pack > 1
+              ? item.units_per_pack
+              : 1;
+          
+          // Validate new stock limit
+          let nextQty = item.quantity;
+          if (nextQty * multiplier > item.stock) {
+            nextQty = Math.max(1, Math.floor(item.stock / multiplier));
+          }
+
+          const unit_price =
+            sellUnit === "pack" && item.pack_price
+              ? Number(item.pack_price)
+              : base_price * multiplier;
+
+          return {
+            ...item,
+            sell_unit: sellUnit,
+            quantity: nextQty,
+            unit_price,
           };
         }
         return item;
@@ -166,6 +234,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         updateQuantity,
         updateVariant,
         updateCapacity,
+        updateSellUnit,
         removeFromCart,
         clearCart,
       }}

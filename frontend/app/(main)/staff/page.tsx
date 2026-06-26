@@ -3,13 +3,18 @@
 import React, { useState } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Plus, User, Shield, Calendar } from "lucide-react";
+import { Plus, User, Shield, Calendar, Lock } from "lucide-react";
 import { apiService } from "@/lib/services/apiService";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/hooks/queryKeys";
 import StaffForm from "@/components/forms/StaffForm";
+import { useGetStore } from "@/lib/hooks/store.hook";
+import { toast } from "sonner";
 
 export default function StaffClient() {
+  const { data: store } = useGetStore();
+  const isFreePlan = store?.current_plan?.slug === "free";
+
   // Modals control
   const [isAdding, setIsAdding] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
@@ -40,34 +45,45 @@ export default function StaffClient() {
           {
             title: "Total Staff",
             value: String(totalStaff),
-            cardBg: "bg-primary/20",
             iconBg: "bg-primary/10",
           },
           {
             title: "Admins/Owners",
             value: String(adminCount),
-            cardBg: "bg-accent/10",
             iconBg: "bg-accent/10",
           },
           {
             title: "Managers",
             value: String(managerCount),
-            cardBg: "bg-secondary/70 text-white",
             iconBg: "bg-secondary/10",
           },
           {
             title: "Cashiers",
             value: String(cashierCount),
-            cardBg: "bg-accent/80",
             iconBg: "bg-accent/10",
           },
         ]}
         actions={
           <Button
-            onClick={() => setIsAdding(true)}
-            className="rounded-lg shadow-lg shadow-primary/20 h-11 px-5 font-bold cursor-pointer"
+            onClick={() => {
+              if (isFreePlan) {
+                toast.error("Staff Limit Reached", {
+                  description:
+                    "Your Free plan only allows 1 staff member (yourself). Please upgrade your subscription to invite staff members.",
+                });
+              } else {
+                setIsAdding(true);
+              }
+            }}
+            className={`rounded-lg shadow-lg shadow-primary/20 h-11 px-5 font-bold cursor-pointer ${
+              isFreePlan ? "opacity-60 cursor-not-allowed" : ""
+            }`}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            {isFreePlan ? (
+              <Lock className="w-4 h-4 mr-2" />
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
             Add New Staff
           </Button>
         }

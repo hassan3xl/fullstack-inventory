@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 interface EditBatchModalProps {
   productId: string;
   batch: any; // The active batch object being edited
+  baseUnit: string;
+  packUnit: string;
+  unitsPerPack: number;
   isModalOpen: boolean;
   closeModal: () => void;
   onBatchUpdated?: () => void;
@@ -29,11 +32,15 @@ interface FormValues {
 const EditBatchModal: React.FC<EditBatchModalProps> = ({
   productId,
   batch,
+  baseUnit,
+  packUnit,
+  unitsPerPack,
   isModalOpen,
   closeModal,
   onBatchUpdated,
 }) => {
   const updateBatchMutation = useUpdateStockBatch();
+  const [multiplier, setMultiplier] = React.useState<number>(1);
 
   const {
     register,
@@ -56,6 +63,8 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
   const productionDate = watch("production_date");
   const bestBeforeDays = watch("best_before_days");
   const expiryDate = watch("expiry_date");
+  const quantityVal = watch("quantity");
+  const initialQuantityVal = watch("initial_quantity");
 
   // Populate form with current batch data on load / change
   useEffect(() => {
@@ -74,16 +83,26 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
         }
       }
 
+      const qty = batch.quantity ?? 0;
+      const initQty = batch.initial_quantity ?? 0;
+      let initialMultiplier = 1;
+      
+      if (unitsPerPack > 1 && qty % unitsPerPack === 0 && initQty % unitsPerPack === 0) {
+        initialMultiplier = unitsPerPack;
+      }
+
+      setMultiplier(initialMultiplier);
+
       reset({
         batch_number: batch.batch_number || "",
-        quantity: String(batch.quantity ?? 0),
-        initial_quantity: String(batch.initial_quantity ?? 0),
+        quantity: String(Math.floor(qty / initialMultiplier)),
+        initial_quantity: String(Math.floor(initQty / initialMultiplier)),
         production_date: prodDateStr,
         expiry_date: expDateStr,
         best_before_days: diffDaysStr,
       });
     }
-  }, [batch, reset]);
+  }, [batch, reset, unitsPerPack]);
 
   // Update expiry date when production date or best before days change
   useEffect(() => {
@@ -119,8 +138,11 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
   }, [productionDate, expiryDate, setValue, bestBeforeDays]);
 
   const onSubmit = async (data: FormValues) => {
-    const qty = parseInt(data.quantity);
-    const initialQty = parseInt(data.initial_quantity);
+    const rawQty = parseInt(data.quantity);
+    const qty = rawQty * multiplier;
+
+    const rawInitialQty = parseInt(data.initial_quantity);
+    const initialQty = rawInitialQty * multiplier;
 
     if (isNaN(qty) || qty < 0) {
       toast.error("Invalid Input", {
@@ -165,34 +187,73 @@ const EditBatchModal: React.FC<EditBatchModalProps> = ({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              name="quantity"
-              register={register}
-              label="Remaining Quantity"
-              type="number"
-              icon={Layers}
-              placeholder="e.g. 50"
-              error={errors.quantity}
-              validation={{
-                required: "Remaining quantity is required",
-                min: { value: 0, message: "Quantity cannot be negative" },
-              }}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div className="sm:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  name="quantity"
+                  register={register}
+                  label="Remaining Quantity"
+                  type="number"
+                  icon={Layers}
+                  placeholder="e.g. 50"
+                  error={errors.quantity}
+                  validation={{
+                    required: "Remaining quantity is required",
+                    min: { value: 0, message: "Quantity cannot be negative" },
+                  }}
+                />
 
-            <Input
-              name="initial_quantity"
-              register={register}
-              label="Initial Quantity"
-              type="number"
-              icon={Layers}
-              placeholder="e.g. 100"
-              error={errors.initial_quantity}
-              validation={{
-                required: "Initial quantity is required",
-                min: { value: 0, message: "Quantity cannot be negative" },
-              }}
-            />
+                <Input
+                  name="initial_quantity"
+                  register={register}
+                  label="Initial Quantity"
+                  type="number"
+                  icon={Layers}
+                  placeholder="e.g. 100"
+                  error={errors.initial_quantity}
+                  validation={{
+                    required: "Initial quantity is required",
+                    min: { value: 0, message: "Quantity cannot be negative" },
+                  }}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">
+                Unit Type
+              </label>
+              <select
+                value={multiplier}
+                onChange={(e) => setMultiplier(parseInt(e.target.value))}
+                className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-xs font-semibold focus:outline-none focus:border-primary/50 text-foreground"
+              >
+                <option value={1}>Loose {baseUnit}(s) (x1)</option>
+                <option value={12}>Dozen (x12)</option>
+                <option value={24}>Crate (x24)</option>
+                {unitsPerPack > 1 && unitsPerPack !== 12 && unitsPerPack !== 24 && (
+                  <option value={unitsPerPack}>
+                    {packUnit} (x{unitsPerPack})
+                  </option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-primary/[0.03] border border-primary/15 rounded-xl p-3 flex justify-between items-center text-xs text-primary font-bold">
+              <span>Total Calculated Remaining:</span>
+              <span className="text-sm font-black tracking-tight">
+                {((parseInt(quantityVal || "0") * multiplier)).toLocaleString()} {baseUnit}(s)
+              </span>
+            </div>
+
+            <div className="bg-muted/40 border border-border/30 rounded-xl p-3 flex justify-between items-center text-xs text-muted-foreground font-bold">
+              <span>Total Calculated Initial:</span>
+              <span className="text-sm font-black tracking-tight">
+                {((parseInt(initialQuantityVal || "0") * multiplier)).toLocaleString()} {baseUnit}(s)
+              </span>
+            </div>
           </div>
 
           <Input

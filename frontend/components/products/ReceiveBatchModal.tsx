@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 interface ReceiveBatchModalProps {
   productId: string;
   productName: string;
+  baseUnit: string;
+  packUnit: string;
+  unitsPerPack: number;
   isModalOpen: boolean;
   closeModal: () => void;
   onBatchReceived?: () => void;
@@ -28,11 +31,15 @@ interface FormValues {
 const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
   productId,
   productName,
+  baseUnit,
+  packUnit,
+  unitsPerPack,
   isModalOpen,
   closeModal,
   onBatchReceived,
 }) => {
   const receiveBatchMutation = useReceiveStockBatch();
+  const [multiplier, setMultiplier] = React.useState<number>(unitsPerPack > 1 ? unitsPerPack : 1);
 
   const {
     register,
@@ -54,13 +61,16 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
   const productionDate = watch("production_date");
   const bestBeforeDays = watch("best_before_days");
   const expiryDate = watch("expiry_date");
+  const quantityVal = watch("quantity");
 
   // Reset form when modal closes/opens
   useEffect(() => {
     if (!isModalOpen) {
       reset();
+    } else {
+      setMultiplier(unitsPerPack > 1 ? unitsPerPack : 1);
     }
-  }, [isModalOpen, reset]);
+  }, [isModalOpen, reset, unitsPerPack]);
 
   // Update expiry date when production date or best before days change
   useEffect(() => {
@@ -96,7 +106,9 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
   }, [productionDate, expiryDate, setValue, bestBeforeDays]);
 
   const onSubmit = async (data: FormValues) => {
-    const qty = parseInt(data.quantity);
+    const rawQty = parseInt(data.quantity);
+    const qty = rawQty * multiplier;
+
     if (isNaN(qty) || qty <= 0) {
       toast.error("Invalid Input", {
         description: "Quantity must be a positive integer.",
@@ -141,19 +153,49 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="space-y-4">
-          <Input
-            name="quantity"
-            register={register}
-            label="Quantity Received"
-            type="number"
-            icon={Layers}
-            placeholder="e.g. 100"
-            error={errors.quantity}
-            validation={{
-              required: "Quantity is required",
-              min: { value: 1, message: "Quantity must be at least 1" },
-            }}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div className="sm:col-span-2">
+              <Input
+                name="quantity"
+                register={register}
+                label="Quantity"
+                type="number"
+                icon={Layers}
+                placeholder="e.g. 10"
+                error={errors.quantity}
+                validation={{
+                  required: "Quantity is required",
+                  min: { value: 1, message: "Quantity must be at least 1" },
+                }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-muted-foreground mb-1.5 uppercase tracking-wider">
+                Unit Type
+              </label>
+              <select
+                value={multiplier}
+                onChange={(e) => setMultiplier(parseInt(e.target.value))}
+                className="w-full bg-background border border-border/50 rounded-lg p-2.5 text-xs font-semibold focus:outline-none focus:border-primary/50 text-foreground"
+              >
+                <option value={1}>Loose {baseUnit}(s) (x1)</option>
+                <option value={12}>Dozen (x12)</option>
+                <option value={24}>Crate (x24)</option>
+                {unitsPerPack > 1 && unitsPerPack !== 12 && unitsPerPack !== 24 && (
+                  <option value={unitsPerPack}>
+                    {packUnit} (x{unitsPerPack})
+                  </option>
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-primary/[0.03] border border-primary/15 rounded-xl p-3 flex justify-between items-center text-xs text-primary font-bold">
+            <span>Total Calculated Quantity:</span>
+            <span className="text-sm font-black tracking-tight">
+              {((parseInt(quantityVal || "0") * multiplier)).toLocaleString()} {baseUnit}(s)
+            </span>
+          </div>
 
           <Input
             name="batch_number"

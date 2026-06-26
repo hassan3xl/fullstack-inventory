@@ -3,7 +3,6 @@ import React, { useEffect, useRef } from "react";
 import {
   Home,
   Package,
-  ShoppingBag,
   TrendingUp,
   Settings,
   HelpCircle,
@@ -15,6 +14,7 @@ import {
   History,
   Crown,
   CreditCard,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGetInventoryStats } from "@/lib/hooks/product.hook";
 import { useGetStore } from "@/lib/hooks/store.hook";
 import { formatNaira } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Sidebar() {
   const { isOpen, closeSidebar } = useSidebar();
@@ -40,6 +41,7 @@ export default function Sidebar() {
   // Role/Permission-based guards
   const permissions = user?.permissions;
   const isBusinessAdmin = user?.role === "is_owner" || permissions?.is_admin;
+  const isFreePlan = store?.current_plan?.slug === "free";
 
   const canViewCategories = isBusinessAdmin || permissions?.is_manager;
   const canViewStaff =
@@ -199,35 +201,72 @@ export default function Sidebar() {
               CRM & Finance
             </p>
             <div className="space-y-1">
-              <Link
-                href="/customers"
-                onClick={closeSidebar}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                  isActive("/customers")
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "hover:bg-accent/50 text-foreground"
-                }`}
-              >
-                <Users size={18} />
-                <span className="font-bold text-sm tracking-tight">
-                  Customers
-                </span>
-              </Link>
-              {isBusinessAdmin && (
+              {isFreePlan ? (
+                <button
+                  onClick={() => {
+                    closeSidebar();
+                    toast.error("CRM & Customers is Premium", {
+                      description: "Upgrade your plan to Basic or above to manage customers.",
+                    });
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                >
+                  <Users size={18} />
+                  <span className="font-bold text-sm tracking-tight text-left flex-1">
+                    Customers
+                  </span>
+                  <Lock size={14} className="text-muted-foreground/45 shrink-0" />
+                </button>
+              ) : (
                 <Link
-                  href="/finance"
+                  href="/customers"
                   onClick={closeSidebar}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                    isActive("/finance")
+                    isActive("/customers")
                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                       : "hover:bg-accent/50 text-foreground"
                   }`}
                 >
-                  <TrendingUp size={18} />
+                  <Users size={18} />
                   <span className="font-bold text-sm tracking-tight">
-                    Finance
+                    Customers
                   </span>
                 </Link>
+              )}
+
+              {isBusinessAdmin && (
+                isFreePlan ? (
+                  <button
+                    onClick={() => {
+                      closeSidebar();
+                      toast.error("Finance Tracker is Premium", {
+                        description: "Upgrade your plan to Basic or above to access finance & accounting.",
+                      });
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                  >
+                    <TrendingUp size={18} />
+                    <span className="font-bold text-sm tracking-tight text-left flex-1">
+                      Finance
+                    </span>
+                    <Lock size={14} className="text-muted-foreground/45 shrink-0" />
+                  </button>
+                ) : (
+                  <Link
+                    href="/finance"
+                    onClick={closeSidebar}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                      isActive("/finance")
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "hover:bg-accent/50 text-foreground"
+                    }`}
+                  >
+                    <TrendingUp size={18} />
+                    <span className="font-bold text-sm tracking-tight">
+                      Finance
+                    </span>
+                  </Link>
+                )
               )}
             </div>
           </div>
@@ -288,7 +327,7 @@ export default function Sidebar() {
         </div>
 
         {/* Sidebar Footer / Current Plan */}
-        {/* {store && (
+        {store && (
           <div className="p-4 border-t border-border/50 bg-accent/20 m-4 rounded-xl shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 animate-pulse">
@@ -313,7 +352,7 @@ export default function Sidebar() {
               </Link>
             )}
           </div>
-        )} */}
+        )}
       </aside>
     </>
   );

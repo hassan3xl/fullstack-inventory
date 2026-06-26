@@ -36,7 +36,7 @@ def tenant_list_view(request):
             else:
                 messages.info(request, f"User {admin_email} already exists and will be assigned as admin.")
 
-            tenant = Tenant.objects.create(name=name, business_type=business_type)
+            tenant = Tenant.objects.create(name=name, business_type=business_type, status=Tenant.StatusChoices.APPROVED)
             TenantUser.objects.create(tenant=tenant, user=user, role=TenantUser.Role.ADMIN)
             
             # Send emails if new user
@@ -95,21 +95,17 @@ def tenant_approve_view(request, pk):
     if request.method == 'POST':
         tenant = get_object_or_404(Tenant, pk=pk)
         
-        # Activate owner user
-        user = tenant.principal_user
-        if user:
-            if not user.is_active:
-                user.is_active = True
-                user.save()
-                messages.success(request, f"User account '{user.email}' activated successfully!")
-            else:
-                messages.info(request, f"User account '{user.email}' is already active.")
-        else:
-            messages.warning(request, "No owner user found to activate.")
-            
+        tenant.status = Tenant.StatusChoices.APPROVED
         tenant.is_active = True
         tenant.save()
-        messages.success(request, f"Tenant '{tenant.name}' registration approved and store activated successfully!")
+        
+        # Ensure owner user is active just in case
+        user = tenant.principal_user
+        if user and not user.is_active:
+            user.is_active = True
+            user.save()
+            
+        messages.success(request, f"Tenant '{tenant.name}' registration approved and verified successfully!")
         
     return redirect('tenant_detail', pk=pk)
 
