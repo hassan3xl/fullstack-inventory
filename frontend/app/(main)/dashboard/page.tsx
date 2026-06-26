@@ -69,7 +69,6 @@ const DashboardClient = () => {
       value: productsArray.length.toString(),
       trend: { value: "In Catalog", isPositive: true },
       icon: <Package className="w-5 h-5 text-primary" />,
-      cardBg: "bg-secondary/20",
       iconBg: "bg-primary/10",
     },
     {
@@ -77,7 +76,6 @@ const DashboardClient = () => {
       value: activeProducts.toString(),
       trend: { value: "Live", isPositive: true },
       icon: <Package className="w-5 h-5 text-secondary" />,
-      cardBg: "bg-secondary/20",
       iconBg: "bg-primary/10",
     },
     {
@@ -88,7 +86,6 @@ const DashboardClient = () => {
         isPositive: false,
       },
       icon: <AlertTriangle className="w-5 h-5 text-tertiary" />,
-      cardBg: "bg-secondary/20",
       iconBg: "bg-primary/10",
     },
 

@@ -29,6 +29,7 @@ import {
   Barcode,
   Printer,
   CheckCircle,
+  Lock,
 } from "lucide-react";
 import Image from "next/image";
 import Loading from "@/components/Loader";
@@ -67,6 +68,7 @@ export default function POSClient() {
 
   const createSaleMutation = useCreateSale();
   const { data: storeInfo } = useGetStore();
+  const isFreePlan = storeInfo?.current_plan?.slug === "free";
   const { config } = useBusinessConfig();
 
   const productsArray = data?.results || [];
@@ -83,6 +85,7 @@ export default function POSClient() {
     updateQuantity,
     updateVariant,
     updateCapacity,
+    updateSellUnit,
     removeFromCart,
     clearCart,
   } = useCart();
@@ -103,6 +106,7 @@ export default function POSClient() {
 
   const { data: customerSuggestions } = useGetCustomers(
     debouncedCustomerSearch.trim() || undefined,
+    { enabled: !!storeInfo },
   );
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -235,6 +239,7 @@ export default function POSClient() {
           quantity: item.quantity,
           variant: item.selectedVariant || null,
           capacity: item.selectedCapacity || null,
+          sell_unit: item.sell_unit,
         })),
       };
 
@@ -358,7 +363,7 @@ export default function POSClient() {
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 :grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
                 {filteredProducts.map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -429,7 +434,7 @@ export default function POSClient() {
                               {item.name}
                             </p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              Unit:{" "}
+                              Unit Price:{" "}
                               <span className="font-semibold text-foreground">
                                 {formatNaira(item.unit_price)}
                               </span>
@@ -447,6 +452,39 @@ export default function POSClient() {
                             <Trash2 size={12} />
                           </button>
                         </div>
+
+                        {/* Sell Unit Type (Pack/Loose) Selector */}
+                        {item.units_per_pack > 1 && (
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-wider w-14 flex-shrink-0">
+                              Unit Type:
+                            </span>
+                            <div className="flex bg-muted border border-border rounded-lg p-0.5 flex-1 max-w-[220px]">
+                              <button
+                                type="button"
+                                onClick={() => updateSellUnit(item.id, "loose")}
+                                className={`flex-1 text-[9px] font-bold py-1 px-1.5 rounded-md transition-all cursor-pointer ${
+                                  item.sell_unit === "loose"
+                                    ? "bg-background text-foreground shadow-xs"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                Loose ({item.base_unit})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateSellUnit(item.id, "pack")}
+                                className={`flex-1 text-[9px] font-bold py-1 px-1.5 rounded-md transition-all cursor-pointer ${
+                                  item.sell_unit === "pack"
+                                    ? "bg-background text-foreground shadow-xs"
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                Pack ({item.pack_unit})
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Variant selector */}
                         {item.variants && item.variants.length > 0 && (
@@ -526,9 +564,11 @@ export default function POSClient() {
 
                   {/* ── Customer Section ─────────── */}
                   <div className="border-t border-border/40 px-4 py-4 bg-muted/20 flex-shrink-0">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-2">
-                      Customer (optional)
-                    </span>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                        Customer (optional)
+                      </span>
+                    </div>
 
                     {selectedCustomer ? (
                       <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-lg px-3 py-2">
@@ -843,8 +883,9 @@ export default function POSClient() {
                         </span>
                         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                           <span className="text-muted-foreground text-[10px]">
-                            {item.quantity} units @{" "}
-                            {formatNaira(item.unit_price)}
+                            {item.quantity}{" "}
+                            {item.sell_unit === "pack" ? "pack(s)" : "unit(s)"}{" "}
+                            @ {formatNaira(item.unit_price)}
                           </span>
                           {item.variant && (
                             <span className="bg-primary/10 text-primary text-[9px] font-black uppercase px-1 rounded-sm">

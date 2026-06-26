@@ -24,25 +24,38 @@ class NotificationService:
         category: str = None,
         action_url: str = None,
         template_name: str = None,
+        tenant = None,
     ) -> Optional[Notification]:
         """
         Send a notification to a single user.
-        
-        Args:
-            user: Target user
-            title: Notification title
-            message: Notification message
-            channels: List of channels (default: [IN_APP])
-            html_message: HTML version of message
-            category: Category for filtering
-            action_url: URL for CTA button
-            template_name: Template name for lookup
-            
-        Returns:
-            Notification object or None
         """
         if channels is None:
             channels = [NotificationChannel.IN_APP]
+
+        # Duplicate check: don't send duplicate notifications within the last 24 hours
+        from datetime import timedelta
+        from django.utils import timezone
+        one_day_ago = timezone.now() - timedelta(days=1)
+        
+        duplicate = Notification.objects.filter(
+            user=user,
+            title=title,
+            message=message,
+            category=category,
+            created_at__gte=one_day_ago
+        ).exists()
+        
+        if duplicate:
+            logger.info(f"Duplicate notification ignored for {user.email}: {title}")
+            return None
+
+        # Check store-level email notifications setting
+        if tenant and not getattr(tenant, "email_notifications_enabled", True):
+            from apps.tenants.models import TenantUser
+            tenant_user = TenantUser.objects.filter(tenant=tenant, user=user).first()
+            # If the user is staff (role != OWNER) and email is in channels, remove it
+            if tenant_user and tenant_user.role != TenantUser.Role.OWNER:
+                channels = [c for c in channels if c != NotificationChannel.EMAIL]
 
         # Get or create user preferences
         preferences, _ = UserNotificationPreference.objects.get_or_create(user=user)
@@ -88,19 +101,18 @@ class NotificationService:
         users: List[User],
         title: str,
         message: str,
+        tenant = None,
         **kwargs,
     ) -> Dict[str, int]:
         """
         Send notifications to multiple users.
-        
-        Returns: {sent: count, failed: count}
         """
         sent = 0
         failed = 0
         
         for user in users:
             try:
-                NotificationService.send_notification(user, title, message, **kwargs)
+                NotificationService.send_notification(user, title, message, tenant=tenant, **kwargs)
                 sent += 1
             except Exception as e:
                 logger.error(f"Failed to send notification to {user.email}: {e}")
@@ -128,15 +140,22 @@ class NotificationService:
         tenant,
         title: str,
         message: str,
+        roles: List[str] = None,
         **kwargs,
     ) -> Dict[str, int]:
-        """Send notification to all users in a tenant"""
+        """Send notification to all users in a tenant, optionally filtered by roles"""
         
-        users = User.objects.filter(
+        # Base query for users in this tenant
+        queryset = User.objects.filter(
             tenant_roles__tenant=tenant
-        ).distinct()
+        )
         
-        return NotificationService.send_bulk_notification(users, title, message, **kwargs)
+        if roles:
+            queryset = queryset.filter(tenant_roles__role__in=roles)
+            
+        users = queryset.distinct()
+        
+        return NotificationService.send_bulk_notification(users, title, message, tenant=tenant, **kwargs)
 
     @staticmethod
     def send_activity_notification(
@@ -147,14 +166,14 @@ class NotificationService:
     ) -> Optional[Notification]:
         """Send activity-based notification"""
         title_map = {
-            'product_added': '📦 New Product Added',
-            'product_updated': '✏️ Product Updated',
-            'product_deleted': '🗑️ Product Removed',
-            'order_created': '📋 New Order',
-            'order_completed': '✅ Order Completed',
-            'stock_low': '⚠️ Low Stock Alert',
-            'user_added': '👤 New Team Member',
-            'user_removed': '❌ Team Member Removed',
+            'product_added': 'New Product Added',
+            'product_updated': 'Product Updated',
+            'product_deleted': 'Product Removed',
+            'order_created': 'New Order',
+            'order_completed': 'Order Completed',
+            'stock_low': 'Low Stock Alert',
+            'user_added': 'New Team Member',
+            'user_removed': 'Team Member Removed',
         }
         
         title = title_map.get(activity_type, 'Notification')

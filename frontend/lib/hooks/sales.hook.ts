@@ -33,11 +33,12 @@ export const useCreateSale = () => {
   });
 };
 
-export const useGetCustomers = (search?: string) => {
-  return useQuery({
+export const useGetCustomers = (search?: string, options?: any) => {
+  return useQuery<any>({
     queryKey: QUERY_KEYS.CUSTOMERS(search),
     queryFn: () => salesApi.getCustomers(search),
     staleTime: 1000 * 60 * 5,
+    ...options,
   });
 };
 

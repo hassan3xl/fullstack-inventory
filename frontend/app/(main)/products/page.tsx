@@ -15,6 +15,8 @@ import { useSearchParams } from "next/navigation";
 import Loading from "@/components/Loader";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
 import { Pagination } from "@/components/ui/Pagination";
+import { useGetStore } from "@/lib/hooks/store.hook";
+import { toast } from "sonner";
 
 const ProductsInventory: React.FC = () => {
   const { config } = useBusinessConfig();
@@ -28,6 +30,39 @@ const ProductsInventory: React.FC = () => {
   const [stockFilter, setStockFilter] = useState("all");
   const [activeStatusFilter, setActiveStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
+
+  const { data: store } = useGetStore();
+
+  const maxProductsAllowed = useMemo(() => {
+    if (!store) return -1;
+    const plan = store.current_plan || {};
+    return plan.max_products !== undefined && plan.max_products !== null
+      ? plan.max_products
+      : plan.slug === "free"
+        ? 50
+        : -1;
+  }, [store]);
+
+  const isLimitReached = useMemo(() => {
+    if (!store || maxProductsAllowed === -1) return false;
+    return (store.total_products || 0) >= maxProductsAllowed;
+  }, [store, maxProductsAllowed]);
+
+  const handleAddProductClick = () => {
+    if (isLimitReached) {
+      toast.error("Plan Limit Reached", {
+        description: `Your subscription plan limits you to a maximum of ${maxProductsAllowed} products. Please upgrade your subscription to add more products.`,
+        action: {
+          label: "Upgrade Plan",
+          onClick: () => {
+            window.location.href = "/subscription";
+          },
+        },
+      });
+      return;
+    }
+    setIsModalOpen(true);
+  };
 
   // Set initial filters based on search params
   useEffect(() => {
@@ -107,12 +142,13 @@ const ProductsInventory: React.FC = () => {
             Stock database is empty.
           </p>
           <Button
-            onClick={() => {
-              setIsModalOpen(true);
-            }}
-            className="rounded-lg h-12 px-8 font-black shadow-xl shadow-primary/20"
+            disabled={isLimitReached}
+            onClick={handleAddProductClick}
+            className="rounded-lg h-12 px-8 font-black shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Register First Batch
+            {isLimitReached
+              ? "🔒 Product Limit Reached"
+              : "Register First Batch"}
           </Button>
         </div>
       ) : (
@@ -131,10 +167,11 @@ const ProductsInventory: React.FC = () => {
             ]}
             actions={
               <Button
-                onClick={() => setIsModalOpen(true)}
-                className="rounded-lg h-12 px-6 font-black shadow-lg shadow-primary/20"
+                disabled={isLimitReached}
+                onClick={handleAddProductClick}
+                className="rounded-lg h-12 px-6 font-black shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                + Add Product
+                {isLimitReached ? "🔒 Product Limit Reached" : "+ Add Product"}
               </Button>
             }
           />
@@ -191,7 +228,7 @@ const ProductsInventory: React.FC = () => {
           {/* Product Grid */}
           {productsArray.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-8">
                 {productsArray.map((product: any) => (
                   <ProductCard
                     key={product.id}

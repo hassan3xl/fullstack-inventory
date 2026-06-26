@@ -31,6 +31,10 @@ class InventoryStatsView(APIView):
         for p in expired_with_stock:
             p.update_stock_from_batches()
             
+        # Trigger product expiry notifications
+        from apps.notifications.triggers import NotificationTriggers
+        NotificationTriggers.check_and_trigger_expiry_notifications(request.tenant)
+            
         # Total value calculation: Sum(stock * unit_price)
         total_value = Product.objects.all().aggregate(
             total=Sum(F('stock') * F('unit_price'))
@@ -94,7 +98,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
         ).exists():
             from rest_framework.exceptions import ValidationError
             raise ValidationError({"name": "A category with this name already exists."})
-        serializer.save(tenant=tenant, business_type=business_type)
+        category = serializer.save(tenant=tenant, business_type=business_type)
+        if tenant:
+            from apps.notifications.triggers import NotificationTriggers
+            user_name = self.request.user.email.split('@')[0]
+            NotificationTriggers.on_category_created(tenant, category.name, user_name)
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -113,7 +121,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({"name": "A category with this name already exists."})
                 
-        serializer.save()
+        old_name = instance.name
+        category = serializer.save()
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            from apps.notifications.triggers import NotificationTriggers
+            user_name = self.request.user.email.split('@')[0]
+            NotificationTriggers.on_category_updated(tenant, old_name, category.name, user_name)
 
     def perform_destroy(self, instance):
         if instance.tenant is None:
@@ -122,7 +136,14 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if instance.products.exists():
             from rest_framework.exceptions import ValidationError
             raise ValidationError({"detail": "Cannot delete category because it contains active products. Reassign or delete the products first."})
+        
+        category_name = instance.name
         instance.delete()
+        tenant = getattr(self.request, 'tenant', None)
+        if tenant:
+            from apps.notifications.triggers import NotificationTriggers
+            user_name = self.request.user.email.split('@')[0]
+            NotificationTriggers.on_category_deleted(tenant, category_name, user_name)
 
     @action(detail=False, methods=['get'], url_path='presets')
     def presets(self, request):
@@ -189,7 +210,34 @@ class ProductViewSet(viewsets.ModelViewSet):
                         "detail": f"You have reached the maximum product limit of {max_products} for your current '{plan.name}' plan. Please upgrade your subscription to add more products."
                     })
         
-        serializer.save(tenant=tenant)
+        product = serializer.save(tenant=tenant)
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = self.request.user.email.split('@')[0]
+        NotificationTriggers.on_product_added(tenant, product.name, user_name)
+
+    def perform_update(self, serializer):
+        tenant = self.request.tenant
+        product = serializer.save()
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = self.request.user.email.split('@')[0]
+        NotificationTriggers.on_product_updated(tenant, product.name, user_name)
+        
+        # Check stock alerts (low stock / out of stock)
+        from apps.products.models import ProductInventory
+        inv = ProductInventory.objects.filter(product=product).first()
+        threshold = inv.low_stock_threshold if inv else 5
+        if product.stock == 0:
+            NotificationTriggers.on_product_out_of_stock(tenant, product.name)
+        elif product.stock <= threshold:
+            NotificationTriggers.on_product_stock_low(tenant, product.name, product.stock)
+
+    def perform_destroy(self, instance):
+        tenant = self.request.tenant
+        product_name = instance.name
+        instance.delete()
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = self.request.user.email.split('@')[0]
+        NotificationTriggers.on_product_deleted(tenant, product_name, user_name)
 
     def get_queryset(self):
         """
@@ -283,8 +331,21 @@ class BatchReceiveView(APIView):
         product = get_object_or_404(Product, pk=product_id)
 
         quantity = request.data.get('quantity')
-        if not quantity:
-            return Response({'error': 'quantity is required'}, status=status.HTTP_400_BAD_REQUEST)
+        packs = request.data.get('packs')
+        loose = request.data.get('loose')
+
+        if packs is not None or loose is not None:
+            try:
+                p_val = int(packs) if packs is not None else 0
+                l_val = int(loose) if loose is not None else 0
+                if p_val < 0 or l_val < 0:
+                    return Response({'error': 'packs and loose must be non-negative integers'}, status=status.HTTP_400_BAD_REQUEST)
+                quantity = (p_val * product.units_per_pack) + l_val
+            except (ValueError, TypeError):
+                return Response({'error': 'packs and loose must be valid integers'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if quantity is None:
+            return Response({'error': 'quantity or packaging units (packs/loose) is required'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             quantity = int(quantity)
             if quantity <= 0:
@@ -304,6 +365,10 @@ class BatchReceiveView(APIView):
             expiry_date=request.data.get('expiry_date') or None,
         )
         batch.save()  # triggers expiry auto-calc + product stock update
+
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = request.user.email.split('@')[0]
+        NotificationTriggers.on_batch_received(request.tenant, product.name, batch.batch_number, batch.quantity, user_name)
 
         from apps.products.serializers import StockBatchSerializer as _BS
         return Response({
@@ -336,8 +401,21 @@ class BatchDetailView(APIView):
         # Update batch fields
         if 'batch_number' in request.data:
             batch.batch_number = request.data['batch_number']
-        if 'quantity' in request.data:
+        
+        packs = request.data.get('packs')
+        loose = request.data.get('loose')
+        if packs is not None or loose is not None:
+            try:
+                p_val = int(packs) if packs is not None else batch.quantity_in_packs
+                l_val = int(loose) if loose is not None else batch.quantity_loose
+                if p_val < 0 or l_val < 0:
+                    return Response({'error': 'packs and loose must be non-negative integers'}, status=status.HTTP_400_BAD_REQUEST)
+                batch.quantity = (p_val * batch.product.units_per_pack) + l_val
+            except (ValueError, TypeError):
+                return Response({'error': 'packs and loose must be valid integers'}, status=status.HTTP_400_BAD_REQUEST)
+        elif 'quantity' in request.data:
             batch.quantity = int(request.data['quantity'])
+
         if 'initial_quantity' in request.data:
             batch.initial_quantity = int(request.data['initial_quantity'])
         if 'production_date' in request.data:
@@ -347,12 +425,23 @@ class BatchDetailView(APIView):
 
         batch.save()  # triggers recalculation and save
 
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = request.user.email.split('@')[0]
+        NotificationTriggers.on_batch_updated(request.tenant, batch.product.name, batch.batch_number, batch.quantity, user_name)
+
         from apps.products.serializers import StockBatchSerializer as _BS
         return Response(_BS(batch).data)
 
     def delete(self, request, product_id, pk):
         batch = get_object_or_404(StockBatch, product_id=product_id, pk=pk)
+        batch_number = batch.batch_number
+        product_name = batch.product.name
         batch.delete()  # triggers overridden delete which recalculates totals
+        
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = request.user.email.split('@')[0]
+        NotificationTriggers.on_batch_deleted(request.tenant, product_name, batch_number, user_name)
+        
         return Response({"status": "success", "message": "Batch deleted successfully"}, status=status.HTTP_200_OK)
 
 

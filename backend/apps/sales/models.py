@@ -93,9 +93,10 @@ class SaleItem(TenantBaseModel):
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     variant = models.CharField(max_length=100, blank=True, null=True, help_text="Selected product variant")
     capacity = models.CharField(max_length=100, blank=True, null=True, help_text="Selected product capacity")
+    sell_unit = models.CharField(max_length=50, default='loose', help_text="Unit type sold: 'loose' or 'pack'")
 
     class Meta:
         db_table = "sale_items"
 
     def __str__(self):
-        return f"{self.product.name} x {self.quantity}"
+        return f"{self.product.name} x {self.quantity} ({self.sell_unit})"

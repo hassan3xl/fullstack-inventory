@@ -332,11 +332,8 @@ function DocsContent() {
               </div>
 
               <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-                Register your business profile below to request a tenant
-                instance. Upon registration, your account is created in an{" "}
-                <strong>inactive</strong> state. Our provisioning team will
-                configure your workspace and email activation steps to your
-                address.
+                Register your business profile below to get started immediately.
+                Upon registration, your account is active, and you can log in using the temporary credentials sent to your email.
               </p>
 
               {statusMsg && (
@@ -355,7 +352,7 @@ function DocsContent() {
                   <div>
                     <p className="font-bold">
                       {statusMsg.type === "success"
-                        ? "Registration Submitted"
+                        ? "Registration Successful"
                         : "Registration Error"}
                     </p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -406,7 +403,6 @@ function DocsContent() {
                   error={errors.business_type}
                   placeholder="Select Store Classification"
                   options={[
-                    { value: "grocery", label: "Grocery Store" },
                     { value: "pharmacy", label: "Pharmacy & Medicine" },
                     { value: "electronics", label: "Electronics & Gadgets" },
                     { value: "clothing", label: "Clothing & Apparel" },
@@ -462,15 +458,6 @@ function DocsContent() {
                   specific trade.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">
-                      Grocery Store
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block">
-                      Optimized for supermarkets, supermarkets, fresh foods,
-                      bakeries, and fast-moving consumer retail.
-                    </span>
-                  </div>
                   <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
                     <span className="text-xs font-black text-foreground block">
                       Pharmacy & Medicine

@@ -17,6 +17,10 @@ export default function Loader() {
     return <FinanceSkeleton />;
   }
 
+  if (pathname.includes("/pos")) {
+    return <DashboardSkeleton />;
+  }
+
   if (
     pathname.includes("/products") ||
     pathname.includes("/categories") ||

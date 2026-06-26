@@ -80,3 +80,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_store_staff(self):
         return self.role == self.RoleChoices.STAFF
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        if is_new:
+            from apps.users.models.profiles import Profile
+            Profile.objects.get_or_create(user=self)

@@ -1,7 +1,7 @@
 {% extends 'base.html' %} 
 {% block title %}{{ tenant.name }} - Platform Admin{% endblock %} 
 {% block content %} 
-{% if owner_user and not owner_user.is_active %}
+{% if tenant.is_pending %}
 <div
   class="mb-6 rounded-lg border border-amber-500/20 bg-amber-500/10 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
 >
@@ -13,12 +13,10 @@
     </div>
     <div>
       <h4 class="font-bold text-amber-800 dark:text-amber-400">
-        Registration Pending Approval
+        Registration Pending Review
       </h4>
       <p class="text-sm text-amber-700/80 dark:text-amber-500/80 mt-0.5">
-        The owner account <strong>{{ owner_user.email }}</strong> is currently
-        inactive. Review the registration details below and approve to enable
-        dashboard access.
+        The owner account <strong>{{ owner_user.email }}</strong> is active and can log in, but this business registration is pending review. Review the details below and verify/approve.
       </p>
     </div>
   </div>
@@ -28,7 +26,7 @@
       type="submit"
       class="w-full md:w-auto inline-flex items-center justify-center rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 text-sm font-black shadow-lg shadow-amber-600/20 transition-all active:scale-95"
     >
-      <i class="fas fa-check-circle mr-2"></i> Approve & Activate Account
+      <i class="fas fa-check-circle mr-2"></i> Approve & Verify Tenant
     </button>
   </form>
 </div>

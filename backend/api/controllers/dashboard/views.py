@@ -55,15 +55,30 @@ class BusinessProfileAPIView(APIView):
 
         return {
             "id": tenant.id,
+            "store_id": tenant.store_id,
             "name": tenant.name,
             "logo": tenant.logo.url if tenant.logo else None,
             "business_type": tenant.business_type,
             "category": tenant.get_business_type_display(),
             "is_active": tenant.is_active,
+            "email_notifications_enabled": tenant.email_notifications_enabled,
             "created_at": tenant.created_at,
             "current_plan": current_plan,
             "total_products": total_products,
             "total_staff": total_staff,
+            "parent_enterprise_tenant": {
+                "id": tenant.parent_enterprise_tenant.id,
+                "name": tenant.parent_enterprise_tenant.name,
+                "store_id": tenant.parent_enterprise_tenant.store_id,
+            } if tenant.parent_enterprise_tenant else None,
+            "linked_premium_stores": [
+                {
+                    "id": store.id,
+                    "name": store.name,
+                    "store_id": store.store_id,
+                }
+                for store in tenant.linked_premium_stores.all()
+            ],
         }
 
     def get(self, request):

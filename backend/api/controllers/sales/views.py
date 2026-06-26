@@ -6,7 +6,7 @@ from apps.tenants.permissions.tenant_roles import RequiresSubscriptionFeature
 
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
-    permission_classes = [HasTenantAccess, IsTenantCashier, RequiresSubscriptionFeature]
+    permission_classes = [HasTenantAccess, IsTenantCashier]
 
     def get_queryset(self):
         qs = Customer.objects.filter(tenant=self.request.tenant)
@@ -29,4 +29,12 @@ class SaleViewSet(viewsets.ModelViewSet):
         return Sale.objects.filter(tenant=self.request.tenant)
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.tenant)
+        sale = serializer.save(tenant=self.request.tenant)
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = self.request.user.email.split('@')[0]
+        NotificationTriggers.on_sale_created(
+            tenant=self.request.tenant,
+            sale_number=sale.sale_number,
+            total=float(sale.total_amount),
+            cashier_name=user_name
+        )

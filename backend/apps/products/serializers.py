@@ -33,6 +33,7 @@ class StockBatchSerializer(ModelSerializer):
         fields = [
             'id', 'batch_number',
             'quantity', 'initial_quantity', 'sold_count',
+            'quantity_in_packs', 'quantity_loose',
             'production_date', 'expiry_date',
             'status', 'days_until_expiry',
             'created_at',
@@ -106,7 +107,8 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'description', 'stock', 'unit_price', 'variants', 'capacities',
+            'id', 'name', 'description', 'stock', 'unit_price', 'pack_price', 'variants', 'capacities',
+            'base_unit', 'pack_unit', 'units_per_pack', 'stock_in_packs', 'stock_loose',
             'category', 'is_active', 'created_at',
             'production_date', 'expiry_date', 'best_before_days',
             'predicted_expiry_date', 'is_expired',
@@ -193,9 +195,10 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'description', 'stock', 'category_id',
-            'unit_price', 'is_active',
+            'unit_price', 'pack_price', 'is_active',
             'production_date', 'expiry_date', 'best_before_days',
-            'variants', 'capacities'
+            'variants', 'capacities',
+            'base_unit', 'pack_unit', 'units_per_pack'
         ]
 
     def create(self, validated_data):

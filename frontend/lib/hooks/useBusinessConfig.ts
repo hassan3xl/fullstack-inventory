@@ -14,10 +14,10 @@ export interface BusinessConfig {
   displayName: string;
   themeColor: string; // Used for UI accent classes (indigo, emerald, teal, rose, etc.)
   features: {
-    expiryTracking: boolean;      // Pharmacy, Grocery, General
+    expiryTracking: boolean;      // Pharmacy, General
     variantTracking: boolean;     // Clothing, Electronics
     serialNumberTracking: boolean; // Electronics
-    weightUnitSupport: boolean;    // Grocery
+    weightUnitSupport: boolean;    // Custom
   };
   labels: {
     productSingular: string;      // e.g. "Medication", "Apparel Item"
@@ -28,46 +28,6 @@ export interface BusinessConfig {
 }
 
 const CONFIGS: Record<string, BusinessConfig> = {
-  grocery: {
-    businessType: "grocery",
-    displayName: "Grocery Store",
-    themeColor: "emerald",
-    features: {
-      expiryTracking: true,
-      variantTracking: false,
-      serialNumberTracking: false,
-      weightUnitSupport: true,
-    },
-    labels: {
-      productSingular: "Grocery Item",
-      productPlural: "Grocery Items",
-      sectionTitle: "Produce & Pantry Catalog",
-    },
-    customFields: [
-      {
-        name: "weight_unit",
-        label: "Weight Unit",
-        type: "select",
-        options: [
-          { value: "kg", label: "Kilograms (kg)" },
-          { value: "g", label: "Grams (g)" },
-          { value: "pcs", label: "Pieces (pcs)" },
-          { value: "litre", label: "Litres (L)" },
-        ],
-        placeholder: "Select selling unit",
-      },
-      {
-        name: "storage_condition",
-        label: "Storage Condition",
-        type: "select",
-        options: [
-          { value: "ambient", label: "Ambient (Room Temp)" },
-          { value: "chilled", label: "Chilled (Refrigerated)" },
-          { value: "frozen", label: "Frozen" },
-        ],
-      },
-    ],
-  },
   pharmacy: {
     businessType: "pharmacy",
     displayName: "Pharmacy & Medicine",

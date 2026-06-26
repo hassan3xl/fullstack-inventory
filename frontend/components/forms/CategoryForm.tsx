@@ -62,7 +62,6 @@ const STRATEGY_HINTS: Record<string, string> = {
 // ─── Placeholder hints per business type ─────────────────────────────────────
 
 const NAME_PLACEHOLDERS: Record<string, string> = {
-  grocery: "e.g. Fresh Produce, Dairy & Eggs",
   pharmacy: "e.g. Antibiotics, Vitamins & Supplements",
   electronics: "e.g. Smartphones, Laptop Accessories",
   clothing: "e.g. Men's T-Shirts, Women's Footwear",
@@ -71,7 +70,6 @@ const NAME_PLACEHOLDERS: Record<string, string> = {
 };
 
 const DESC_PLACEHOLDERS: Record<string, string> = {
-  grocery: "Describe the type of grocery items in this category...",
   pharmacy: "Describe the medications or health products here...",
   electronics: "Describe the devices or accessories in this category...",
   clothing: "Describe the clothing style, gender or age group...",

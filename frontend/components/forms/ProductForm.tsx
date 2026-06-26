@@ -37,10 +37,14 @@ interface ProductFormValues {
   name: string;
   category_id: string;
   unit_price: string;
+  pack_price: string;
   description: string;
   is_active: boolean;
   variants: string[];
   capacities: CapacityEntry[];
+  base_unit: string;
+  pack_unit: string;
+  units_per_pack: string | number;
 }
 
 interface ProductFormProps {
@@ -55,7 +59,6 @@ interface ProductFormProps {
 // ─── Name & description placeholders keyed by business type ─────────────────
 
 const NAME_PLACEHOLDERS: Record<string, string> = {
-  grocery: "e.g. Organic Whole Milk 1L",
   pharmacy: "e.g. Amoxicillin 500mg Capsules",
   electronics: "e.g. Samsung Galaxy Buds Pro",
   clothing: "e.g. Men's Slim-Fit Chino Trousers",
@@ -64,7 +67,6 @@ const NAME_PLACEHOLDERS: Record<string, string> = {
 };
 
 const DESC_PLACEHOLDERS: Record<string, string> = {
-  grocery: "Describe size, variant or brand details for this grocery item...",
   pharmacy: "Describe dosage, form, or usage instructions...",
   electronics: "Describe model, specs, or included accessories...",
   clothing: "Describe material, fit, gender or size range...",
@@ -92,6 +94,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
   );
   const addMutation = useAddProduct();
   const editMutation = useEditProduct();
+  const [hasPackaging, setHasPackaging] = useState(false);
+  const [baseUnitPreset, setBaseUnitPreset] = useState("Piece");
+  const [packTypePreset, setPackTypePreset] = useState("Dozen");
 
   const {
     register,
@@ -105,20 +110,49 @@ const ProductForm: React.FC<ProductFormProps> = ({
       name: "",
       category_id: "",
       unit_price: "",
+      pack_price: "",
       description: "",
       is_active: true,
       variants: [],
       capacities: [],
+      base_unit: "Piece",
+      pack_unit: "Box",
+      units_per_pack: 1,
     },
   });
 
   // Populate form when editing
   useEffect(() => {
     if (isEditMode && product) {
+      const units = product.units_per_pack ?? 1;
+      setHasPackaging(units > 1);
+      
+      const presetOptions = ["Piece", "Bottle", "Can", "Sachet", "Bag", "Pack", "Pair", "Roll"];
+      const isPreset = presetOptions.includes(product.base_unit ?? "Piece");
+      setBaseUnitPreset(isPreset ? (product.base_unit ?? "Piece") : "custom");
+
+      const pUnit = product.pack_unit ?? "Box";
+      if (units === 12 && pUnit.toLowerCase() === "dozen") {
+        setPackTypePreset("Dozen");
+      } else if (units === 24 && pUnit.toLowerCase() === "crate") {
+        setPackTypePreset("Crate");
+      } else if (units === 48 && pUnit.toLowerCase() === "carton") {
+        setPackTypePreset("Carton");
+      } else if (units === 10 && pUnit.toLowerCase() === "pack") {
+        setPackTypePreset("Pack10");
+      } else if (units > 1) {
+        setPackTypePreset("custom");
+      } else {
+        setPackTypePreset("Dozen");
+      }
+
       reset({
         name: product.name ?? "",
         category_id: product.category?.id ?? "",
         unit_price: formatPriceWithCommas(product.unit_price ?? ""),
+        pack_price: product.pack_price
+          ? formatPriceWithCommas(product.pack_price)
+          : "",
         description: product.description ?? "",
         is_active: product.is_active ?? true,
         variants: product.variants ?? [],
@@ -126,6 +160,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
           name: c.name ?? "",
           price: c.price ? formatPriceWithCommas(c.price) : "",
         })),
+        base_unit: product.base_unit ?? "Piece",
+        pack_unit: product.pack_unit ?? "Box",
+        units_per_pack: product.units_per_pack ?? 1,
       });
     }
   }, [product, isEditMode, reset]);
@@ -133,14 +170,21 @@ const ProductForm: React.FC<ProductFormProps> = ({
   // Reset form when create-modal closes
   useEffect(() => {
     if (!isModalOpen && !isEditMode) {
+      setHasPackaging(false);
+      setBaseUnitPreset("Piece");
+      setPackTypePreset("Dozen");
       reset({
         name: "",
         category_id: "",
         unit_price: "",
+        pack_price: "",
         description: "",
         is_active: true,
         variants: [],
         capacities: [],
+        base_unit: "Piece",
+        pack_unit: "Box",
+        units_per_pack: 1,
       });
     }
   }, [isModalOpen, isEditMode, reset]);
@@ -196,6 +240,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const onSubmit = async (data: ProductFormValues) => {
     const cleanPrice = parsePriceFromFormatted(data.unit_price);
+    const cleanPackPrice =
+      hasPackaging && data.pack_price
+        ? parsePriceFromFormatted(data.pack_price)
+        : null;
     const cleanCapacities = (data.capacities || [])
       .filter((c) => c.name.trim() !== "")
       .map((c) => ({
@@ -209,9 +257,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
       description: data.description || null,
       category_id: data.category_id,
       unit_price: cleanPrice,
+      pack_price: cleanPackPrice,
       is_active: data.is_active,
       variants: data.variants || [],
       capacities: cleanCapacities,
+      base_unit: data.base_unit || "Piece",
+      pack_unit: hasPackaging
+        ? data.pack_unit || "Box"
+        : data.base_unit || "Piece",
+      units_per_pack: hasPackaging ? Number(data.units_per_pack) || 12 : 1,
     };
 
     if (isEditMode) {
@@ -351,6 +405,201 @@ const ProductForm: React.FC<ProductFormProps> = ({
               },
             }}
           />
+        </div>
+
+        {/* ── Packaging & Units of Measure ────────────────────────────── */}
+        <div className="space-y-4 pt-6 border-t border-border/40">
+          <h4 className="flex items-center gap-2 text-xs font-black text-muted-foreground uppercase tracking-widest">
+            <Package size={14} /> Packaging & Unit of Measure
+          </h4>
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            Configure how this product is stocked and sold. If this product is
+            sold in bulk crates or cartons (e.g. wholesale), you can enable
+            packaging below.
+          </p>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">
+                Base/Selling Unit (Single) <span className="text-destructive">*</span>
+              </label>
+              <select
+                value={baseUnitPreset}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setBaseUnitPreset(val);
+                  if (val !== "custom") {
+                    setValue("base_unit", val);
+                  } else {
+                    setValue("base_unit", "");
+                  }
+                }}
+                className="w-full rounded-lg border border-input bg-background px-4 py-2.5 outline-none text-foreground text-sm font-semibold focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-[44px]"
+              >
+                <option value="Piece">Piece</option>
+                <option value="Bottle">Bottle</option>
+                <option value="Can">Can</option>
+                <option value="Sachet">Sachet</option>
+                <option value="Bag">Bag</option>
+                <option value="Pack">Pack</option>
+                <option value="Pair">Pair</option>
+                <option value="Roll">Roll</option>
+                <option value="custom">Custom Single Unit...</option>
+              </select>
+            </div>
+
+            {baseUnitPreset === "custom" && (
+              <Input
+                name="base_unit"
+                register={register}
+                label="Custom Single Unit Name"
+                placeholder="e.g. Loaf, Tube, Sachet"
+                error={errors.base_unit}
+                validation={{ required: "Custom unit name is required" }}
+              />
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-muted/30 border border-border/40 rounded-xl">
+            <input
+              type="checkbox"
+              id="hasPackagingToggle"
+              checked={hasPackaging}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setHasPackaging(checked);
+                if (!checked) {
+                  setValue("units_per_pack", 1);
+                  setValue("pack_unit", watch("base_unit") || "Piece");
+                  setValue("pack_price", "");
+                } else {
+                  // Enable default preset: Dozen
+                  setPackTypePreset("Dozen");
+                  setValue("units_per_pack", 12);
+                  setValue("pack_unit", "Dozen");
+                }
+              }}
+              className="w-4 h-4 rounded text-primary border-border focus:ring-primary/40 cursor-pointer"
+            />
+            <label
+              htmlFor="hasPackagingToggle"
+              className="text-xs font-bold text-foreground cursor-pointer select-none leading-none"
+            >
+              This product is also sold or stocked in wholesale packs (crates,
+              cartons, boxes, etc.)
+            </label>
+          </div>
+
+          {hasPackaging && (
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-4 transition-all">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Bulk Pack Type <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={packTypePreset}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPackTypePreset(val);
+                    if (val === "Dozen") {
+                      setValue("pack_unit", "Dozen");
+                      setValue("units_per_pack", 12);
+                    } else if (val === "Crate") {
+                      setValue("pack_unit", "Crate");
+                      setValue("units_per_pack", 24);
+                    } else if (val === "Carton") {
+                      setValue("pack_unit", "Carton");
+                      setValue("units_per_pack", 48);
+                    } else if (val === "Pack10") {
+                      setValue("pack_unit", "Pack");
+                      setValue("units_per_pack", 10);
+                    } else {
+                      setValue("pack_unit", "");
+                      setValue("units_per_pack", "");
+                    }
+                  }}
+                  className="w-full rounded-lg border border-input bg-background px-4 py-2.5 outline-none text-foreground text-sm font-semibold focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-[44px]"
+                >
+                  <option value="Dozen">Dozen (12 items)</option>
+                  <option value="Crate">Crate (24 items)</option>
+                  <option value="Carton">Carton (48 items)</option>
+                  <option value="Pack10">Pack (10 items)</option>
+                  <option value="custom">Custom Packaging...</option>
+                </select>
+              </div>
+
+              {packTypePreset === "custom" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    name="pack_unit"
+                    register={register}
+                    label="Bulk Pack Unit Name"
+                    placeholder="e.g. Box, Bundle, Pack"
+                    error={errors.pack_unit}
+                    validation={{ required: hasPackaging ? "Pack unit is required" : false }}
+                  />
+                  <Input
+                    name="units_per_pack"
+                    register={register}
+                    label={`Number of ${watch("base_unit") || "Piece"}s in one pack`}
+                    type="number"
+                    placeholder="e.g. 10, 50, 100"
+                    error={errors.units_per_pack}
+                    validation={{
+                      required: hasPackaging ? "Units per pack is required" : false,
+                      min: {
+                        value: 2,
+                        message: "Must be at least 2 for bulk packaging",
+                      },
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border/40 pt-4">
+                <Input
+                  name="pack_price"
+                  register={register}
+                  label={`Bulk ${watch("pack_unit") || "Pack"} Selling Price (₦) - Optional`}
+                  icon={DollarSign}
+                  placeholder="Defaults to Single Price × Units Per Pack"
+                  error={errors.pack_price}
+                  validation={{
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      setValue(
+                        "pack_price",
+                        formatPriceWithCommas(e.target.value),
+                      );
+                    },
+                  }}
+                />
+                <div className="flex items-center text-[10px] text-muted-foreground bg-background border border-border/40 rounded-xl p-3">
+                  <span>
+                    <strong>Summary Formula:</strong> You sell 1 single{" "}
+                    <strong>{watch("base_unit") || "Piece"}</strong> at ₦
+                    {watch("unit_price") || "0.00"}. A whole{" "}
+                    <strong>{watch("pack_unit") || "Box"}</strong> (containing{" "}
+                    {watch("units_per_pack") || 1}{" "}
+                    {watch("base_unit") || "Piece"}s) will sell for{" "}
+                    <strong>
+                      ₦
+                      {watch("pack_price") ||
+                        formatPriceWithCommas(
+                          String(
+                            Number(
+                              parsePriceFromFormatted(
+                                watch("unit_price") || "0",
+                              ) || 0,
+                            ) * Number(watch("units_per_pack") || 1),
+                          ),
+                        )}
+                    </strong>
+                    .
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Business-type custom fields (from config) ──────────────── */}

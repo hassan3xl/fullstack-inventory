@@ -249,3 +249,6 @@ class NotificationClearAllAPIView(APIView):
             "message": f"Deleted {count} notifications",
             "count": count
         })
+
+    def post(self, request):
+        return self.delete(request)

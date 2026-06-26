@@ -47,6 +47,7 @@ export type Product = {
   description: string;
   images: ProductImages[];
   unit_price: number;
+  pack_price?: number;
   production_date?: string;
   expiry_date?: string;
   predicted_expiry_date?: string;
@@ -67,6 +68,8 @@ export type Product = {
     quantity: number;
     initial_quantity: number;
     sold_count: number;
+    quantity_in_packs?: number;
+    quantity_loose?: number;
     production_date: string | null;
     expiry_date: string | null;
     status: "fresh" | "near_expiry" | "critical" | "expired" | "no_expiry";
@@ -78,6 +81,9 @@ export type Product = {
     name: string;
     price: number | null;
   }>;
+  base_unit?: string;
+  pack_unit?: string;
+  units_per_pack?: number;
   created_at: string;
   updated_at: string;
 };

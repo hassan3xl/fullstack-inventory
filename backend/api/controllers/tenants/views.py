@@ -24,7 +24,7 @@ class TenantRegisterAPIView(APIView):
     POST /api/tenants/register/
     {
         "business_name": "My Store",
-        "business_type": "grocery",
+        "business_type": "pharmacy",
         "admin_email": "owner@example.com"
     }
     Creates the User (role=TENANT, is_active=False) and Tenant, then links them as OWNER.
@@ -47,10 +47,10 @@ class TenantRegisterAPIView(APIView):
         from django.db import transaction
         try:
             with transaction.atomic():
-                # 1. Create or get User — new registrations are business owners (TENANT role), set inactive
+                # 1. Create or get User — new registrations are business owners (TENANT role), set active immediately
                 user, created = User.objects.get_or_create(
                     email=admin_email,
-                    defaults={'role': User.RoleChoices.TENANT, 'is_active': False}
+                    defaults={'role': User.RoleChoices.TENANT, 'is_active': True}
                 )
                 if created:
                     password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
@@ -116,7 +116,7 @@ class TenantRegisterAPIView(APIView):
                     # Continue even if email fails
 
                 return Response({
-                    "message": "Registration received successfully. Your account is currently inactive. We will configure your application instance and send setup instructions to your email.",
+                    "message": "Registration received successfully. Your account is active. You can now log in using the temporary credentials sent to your email.",
                     "business_name": tenant.name,
                     "admin_email": admin_email
                 }, status=status.HTTP_201_CREATED)
@@ -244,3 +244,107 @@ class SubscribeTenantAPIView(APIView):
 
         serializer = TenantSubscriptionSerializer(sub)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class VerifyStoreAPIView(APIView):
+    """
+    Verify store existence by store_id.
+    GET /api/tenants/verify-store/?store_id=STORE-XXXXXX
+    """
+    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def get(self, request):
+        store_id = request.query_params.get('store_id')
+        if not store_id:
+            return Response({'detail': 'store_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            store = Tenant.objects.get(store_id=store_id.strip().upper())
+        except Tenant.DoesNotExist:
+            return Response({'detail': 'Store not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'id': store.id,
+            'name': store.name,
+            'store_id': store.store_id,
+            'current_plan': store.current_plan.name if store.current_plan else 'Free Plan',
+        })
+
+
+class LinkPremiumStoreAPIView(APIView):
+    """
+    Link a store to an Enterprise subscription.
+    POST /api/tenants/link-store/
+    { "store_id": "STORE-XXXXXX" }
+    """
+    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def post(self, request):
+        store_id = request.data.get('store_id')
+        if not store_id:
+            return Response({'detail': 'store_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        parent_tenant = request.tenant
+        current_plan = parent_tenant.current_plan
+
+        if not current_plan or current_plan.slug != 'enterprise':
+            return Response({'detail': 'Only Enterprise plans can link other stores.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if parent_tenant.linked_premium_stores.count() >= 1:
+            return Response({'detail': 'You have reached the maximum of 2 stores on this plan (1 parent + 1 invited).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_store = Tenant.objects.get(store_id=store_id.strip().upper())
+        except Tenant.DoesNotExist:
+            return Response({'detail': 'Store not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if target_store.id == parent_tenant.id:
+            return Response({'detail': 'You cannot link your own store to itself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if target_store.parent_enterprise_tenant:
+            return Response({'detail': 'This store is already linked to an Enterprise plan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Deactivate target store's own active subscriptions
+        with transaction.atomic():
+            TenantSubscription.plain_objects.filter(tenant=target_store, active=True).update(active=False)
+            target_store.parent_enterprise_tenant = parent_tenant
+            target_store.save()
+
+        return Response({
+            'message': f'Successfully linked {target_store.name} to your Enterprise plan.',
+            'store': TenantSerializer(target_store).data
+        })
+
+
+class UnlinkPremiumStoreAPIView(APIView):
+    """
+    Unlink a store from an Enterprise subscription.
+    POST /api/tenants/unlink-store/
+    { "store_id": "STORE-XXXXXX" }
+    """
+    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def post(self, request):
+        store_id = request.data.get('store_id')
+        if not store_id:
+            return Response({'detail': 'store_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        parent_tenant = request.tenant
+        try:
+            target_store = Tenant.objects.get(store_id=store_id.strip().upper(), parent_enterprise_tenant=parent_tenant)
+        except Tenant.DoesNotExist:
+            return Response({'detail': 'Linked store not found under your account.'}, status=status.HTTP_404_NOT_FOUND)
+
+        with transaction.atomic():
+            target_store.parent_enterprise_tenant = None
+            target_store.save()
+            # Restore default free subscription
+            default_plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+            if default_plan:
+                TenantSubscription.plain_objects.create(
+                    tenant=target_store,
+                    plan=default_plan,
+                    active=True,
+                )
+
+        return Response({'message': f'Successfully unlinked {target_store.name} from your plan.'})

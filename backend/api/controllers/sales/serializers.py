@@ -16,10 +16,11 @@ class SaleItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     variant = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     capacity = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    sell_unit = serializers.CharField(required=False, default='loose')
 
     class Meta:
         model = SaleItem
-        fields = ['id', 'product_id', 'product_name', 'quantity', 'unit_price', 'total_price', 'variant', 'capacity']
+        fields = ['id', 'product_id', 'product_name', 'quantity', 'unit_price', 'total_price', 'variant', 'capacity', 'sell_unit']
         read_only_fields = ['id', 'unit_price', 'total_price']
 
 class SaleSerializer(serializers.ModelSerializer):
@@ -102,12 +103,20 @@ class SaleSerializer(serializers.ModelSerializer):
                 qty = item_data['quantity']
                 variant = item_data.get('variant', None)
                 capacity = item_data.get('capacity', None)
+                sell_unit = item_data.get('sell_unit', 'loose')
 
                 product = get_object_or_404(Product, id=product_id)
 
-                if product.stock < qty:
+                # Determine multiplier for pack sales
+                multiplier = 1
+                if sell_unit == 'pack' and product.units_per_pack > 1:
+                    multiplier = product.units_per_pack
+
+                total_pieces = qty * multiplier
+
+                if product.stock < total_pieces:
                     raise serializers.ValidationError(
-                        f"Insufficient stock for product '{product.name}'. Requested: {qty}, Available: {product.stock}"
+                        f"Insufficient stock for product '{product.name}'. Requested: {total_pieces} {product.base_unit}(s), Available: {product.stock} {product.base_unit}(s)"
                     )
 
                 # Deduct stock using FEFO (First Expired First Out)
@@ -127,7 +136,7 @@ class SaleSerializer(serializers.ModelSerializer):
                 
                 ordered_batches = expiry_batches + no_expiry_batches
                 
-                remaining_qty = qty
+                remaining_qty = total_pieces
                 for batch in ordered_batches:
                     if remaining_qty <= 0:
                         break
@@ -144,16 +153,22 @@ class SaleSerializer(serializers.ModelSerializer):
                 # Force product total stock updates
                 product.update_stock_from_batches()
 
-                # Resolve unit price: use capacity-based price if applicable
-                unit_price = product.unit_price
+                # Resolve base unit price: use capacity-based price if applicable
+                base_price = product.unit_price
                 if capacity and product.capacities:
                     for cap in product.capacities:
                         if isinstance(cap, dict) and cap.get('name') == capacity and cap.get('price'):
                             try:
-                                unit_price = Decimal(str(cap['price']))
+                                base_price = Decimal(str(cap['price']))
                             except Exception:
                                 pass
                             break
+
+                # The unit price of the sold item (can be pack price or loose unit price)
+                if sell_unit == 'pack' and product.pack_price:
+                    unit_price = product.pack_price
+                else:
+                    unit_price = base_price * multiplier
 
                 total_price = unit_price * qty
                 calculated_subtotal += total_price
@@ -166,6 +181,7 @@ class SaleSerializer(serializers.ModelSerializer):
                     total_price=total_price,
                     variant=variant,
                     capacity=capacity,
+                    sell_unit=sell_unit,
                 )
 
             sale.subtotal = calculated_subtotal

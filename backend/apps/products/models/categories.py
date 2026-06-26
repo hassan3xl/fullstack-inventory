@@ -18,7 +18,6 @@ class Category(TenantBaseModel):
 
     # Mirror Tenant.BusinessType so we can filter categories per store type
     class BusinessType(models.TextChoices):
-        GROCERY      = 'grocery',      'Grocery & Provisions'
         PHARMACY     = 'pharmacy',     'Pharmacy & Medicine'
         ELECTRONICS  = 'electronics',  'Electronics & Gadgets'
         CLOTHING     = 'clothing',     'Clothing & Apparel'
@@ -68,22 +67,6 @@ class Category(TenantBaseModel):
     #  Preset categories seeded via data migration                         #
     # ------------------------------------------------------------------ #
     PRESETS = {
-        'grocery': [
-            {'name': 'Grains & Cereals',      'expiry_strategy': 'STABLE',     'default_best_before_days': 365},
-            {'name': 'Dairy & Eggs',           'expiry_strategy': 'PERISHABLE', 'default_best_before_days': 14},
-            {'name': 'Meat & Poultry',         'expiry_strategy': 'PERISHABLE', 'default_best_before_days': 5},
-            {'name': 'Fish & Seafood',         'expiry_strategy': 'PERISHABLE', 'default_best_before_days': 3},
-            {'name': 'Fruits & Vegetables',    'expiry_strategy': 'PERISHABLE', 'default_best_before_days': 7},
-            {'name': 'Bread & Bakery',         'expiry_strategy': 'PERISHABLE', 'default_best_before_days': 5},
-            {'name': 'Canned & Preserved',     'expiry_strategy': 'STABLE',     'default_best_before_days': 730},
-            {'name': 'Cooking Oils & Fats',    'expiry_strategy': 'STABLE',     'default_best_before_days': 540},
-            {'name': 'Spices & Seasonings',    'expiry_strategy': 'STABLE',     'default_best_before_days': 730},
-            {'name': 'Snacks & Confectionery', 'expiry_strategy': 'STABLE',     'default_best_before_days': 180},
-            {'name': 'Beverages',              'expiry_strategy': 'STABLE',     'default_best_before_days': 365},
-            {'name': 'Household & Cleaning',   'expiry_strategy': 'GENERAL',    'default_best_before_days': 0},
-            {'name': 'Baby & Infant',          'expiry_strategy': 'STABLE',     'default_best_before_days': 365},
-            {'name': 'Frozen Foods',           'expiry_strategy': 'PERISHABLE', 'default_best_before_days': 90},
-        ],
         'pharmacy': [
             {'name': 'Prescription Drugs',     'expiry_strategy': 'MEDICAL',    'default_best_before_days': 730},
             {'name': 'Over-the-Counter (OTC)', 'expiry_strategy': 'MEDICAL',    'default_best_before_days': 730},
