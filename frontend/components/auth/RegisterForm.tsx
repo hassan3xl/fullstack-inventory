@@ -8,7 +8,7 @@ import { Key, Mail, User2, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { apiService, getBackendErrorMessage } from "@/lib/services/apiService";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner"
+import { toast } from "sonner";
 
 type FormValues = {
   email: string;
@@ -66,7 +66,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="w-full max-w-sm p-8 rounded-lg shadow-lg border border-border bg-card">
+    <div className="w-full max-w-lg p-8 rounded-lg shadow-lg border border-border bg-card">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Create Account</h1>

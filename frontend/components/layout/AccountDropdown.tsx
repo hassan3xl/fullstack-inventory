@@ -160,7 +160,7 @@ export function AccountDropdown() {
 
                 <DropdownMenuItem asChild>
                   <Link
-                    href="/register"
+                    href="/docs?tab=register-app"
                     className="cursor-pointer flex items-center gap-2"
                   >
                     <ShoppingBag className="h-4 w-4" />

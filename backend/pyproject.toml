@@ -38,6 +38,7 @@ dependencies = [
     "typing-extensions==4.15.0",
     "urllib3==2.6.3",
     "whitenoise==6.11.0",
+    "redis>=5.0.0",
 ]
 
 [dependency-groups]

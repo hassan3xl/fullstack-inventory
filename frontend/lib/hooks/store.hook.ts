@@ -57,3 +57,29 @@ export const useUpdateStoreLogo = () => {
     },
   });
 };
+
+// --------------------------------------
+// GET SUBSCRIPTION PLANS
+// --------------------------------------
+export function useGetSubscriptionPlans() {
+  return useQuery({
+    queryKey: ["subscription-plans"],
+    queryFn: StoreApi.getSubscriptionPlans,
+    staleTime: 1000 * 60 * 30, // 30 minutes
+  });
+}
+
+// --------------------------------------
+// SUBSCRIBE TO PLAN
+// --------------------------------------
+export const useSubscribeToPlan = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (planSlug: string) => StoreApi.subscribeToPlan(planSlug),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["store"] });
+    },
+  });
+};

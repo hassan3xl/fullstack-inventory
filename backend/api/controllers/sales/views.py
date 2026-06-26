@@ -2,10 +2,11 @@ from rest_framework import viewsets
 from apps.tenants.permissions.tenant_roles import HasTenantAccess, IsTenantCashier
 from apps.sales.models import Sale, Customer
 from .serializers import SaleSerializer, CustomerSerializer
+from apps.tenants.permissions.tenant_roles import RequiresSubscriptionFeature
 
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
-    permission_classes = [HasTenantAccess, IsTenantCashier]
+    permission_classes = [HasTenantAccess, IsTenantCashier, RequiresSubscriptionFeature]
 
     def get_queryset(self):
         qs = Customer.objects.filter(tenant=self.request.tenant)

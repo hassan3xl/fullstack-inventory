@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { useGetProducts } from "@/lib/hooks/product.hook";
+import {
+  useGetProducts,
+  useGetProductsCategories,
+} from "@/lib/hooks/product.hook";
+import { productApi } from "@/lib/api/product.api";
+import { Pagination } from "@/components/ui/Pagination";
 import { useCreateSale, useGetCustomers } from "@/lib/hooks/sales.hook";
 import { useGetStore } from "@/lib/hooks/store.hook";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
@@ -31,14 +36,46 @@ import Loading from "@/components/Loader";
 import { useCart, CartItem } from "@/contexts/CartContext";
 
 export default function POSClient() {
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [discount, setDiscount] = useState<number>(0);
+  const [tax, setTax] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Reset page to 1 on search or category filter change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm, selectedCategory]);
+
   const {
-    data: products,
+    data: data,
     isLoading: productsLoading,
     refetch,
-  } = useGetProducts();
+  } = useGetProducts({
+    page,
+    page_size: 9, // Using 9 items per page (3x3 grid) for optimal spacing
+    search: debouncedSearchTerm.trim() || undefined,
+    category: selectedCategory === "all" ? undefined : selectedCategory,
+    active_status: "active",
+  });
+
+  const { data: categoriesData } = useGetProductsCategories();
+
   const createSaleMutation = useCreateSale();
   const { data: storeInfo } = useGetStore();
   const { config } = useBusinessConfig();
+
+  const productsArray = data?.results || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / 9);
+  const hasPrevious = !!data?.previous;
+  const hasNext = !!data?.next;
+
+  console.log("productsArray", productsArray);
 
   const {
     cart,
@@ -49,13 +86,6 @@ export default function POSClient() {
     removeFromCart,
     clearCart,
   } = useCart();
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [barcodeInput, setBarcodeInput] = useState("");
-  const [discount, setDiscount] = useState<number>(0);
-  const [tax, setTax] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   // Dialog / Receipt states
   const [showReceipt, setShowReceipt] = useState(false);
@@ -107,49 +137,60 @@ export default function POSClient() {
     }
   }, []);
 
-  // Categories list
+  // Categories list from server
   const categories = useMemo(() => {
-    if (!products || !Array.isArray(products)) return [];
+    if (!categoriesData) return [];
     return Array.from(
-      new Set(products.map((p: any) => p.category?.name).filter(Boolean)),
-    );
-  }, [products]);
+      new Set(categoriesData.map((c: any) => c.name).filter(Boolean)),
+    ) as string[];
+  }, [categoriesData]);
 
-  // Filtered Products
+  // Filtered Products (already filtered on server side by search and category)
   const filteredProducts = useMemo(() => {
-    if (!products || !Array.isArray(products)) return [];
-    const query = searchTerm.trim().toLowerCase();
-    return products.filter((p: any) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(query) ||
-        (p.inventory?.sku && p.inventory.sku.toLowerCase().includes(query));
-      const matchesCategory =
-        selectedCategory === "all" || p.category?.name === selectedCategory;
-      return matchesSearch && matchesCategory && p.is_active;
-    });
-  }, [products, searchTerm, selectedCategory]);
+    if (!productsArray || !Array.isArray(productsArray)) return [];
+    return productsArray.filter((p: any) => p.is_active);
+  }, [productsArray]);
 
   // Handle Simulated Barcode Scan Submission
-  const handleBarcodeSubmit = (e: React.FormEvent) => {
+  const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcodeInput.trim() || !products || !Array.isArray(products)) return;
+    const barcode = barcodeInput.trim();
+    if (!barcode || !productsArray || !Array.isArray(productsArray)) return;
 
-    const targetProduct = products.find(
-      (p: any) =>
-        p.inventory?.sku &&
-        p.inventory.sku.toLowerCase() === barcodeInput.trim().toLowerCase(),
-    );
+    try {
+      // 1. Search locally in the current page's productsArray first (faster)
+      let targetProduct = productsArray.find(
+        (p: any) =>
+          p.inventory?.sku &&
+          p.inventory.sku.toLowerCase() === barcode.toLowerCase(),
+      );
 
-    if (targetProduct) {
-      playBeep();
-      addToCart(targetProduct);
-      toast.success("Product Scanned", {
-        description: `Successfully added "${targetProduct.name}" to cart.`,
-      });
-      setBarcodeInput("");
-    } else {
-      toast.error("Not Found", {
-        description: `No product matches SKU code "${barcodeInput}".`,
+      // 2. If not found locally, query the API by search = barcode
+      if (!targetProduct) {
+        const response = await productApi.getProducts({ search: barcode });
+        const results = response?.results || [];
+        targetProduct = results.find(
+          (p: any) =>
+            p.inventory?.sku &&
+            p.inventory.sku.toLowerCase() === barcode.toLowerCase(),
+        );
+      }
+
+      if (targetProduct) {
+        playBeep();
+        addToCart(targetProduct);
+        toast.success("Product Scanned", {
+          description: `Successfully added "${targetProduct.name}" to cart.`,
+        });
+        setBarcodeInput("");
+      } else {
+        toast.error("Not Found", {
+          description: `No product matches SKU code "${barcode}".`,
+        });
+      }
+    } catch (err) {
+      toast.error("Lookup Error", {
+        description: "Failed to scan product barcode.",
       });
     }
   };
@@ -316,17 +357,27 @@ export default function POSClient() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 :grid-cols-3 gap-4">
-              {filteredProducts.map((product: any) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 :grid-cols-3 gap-4">
+                {filteredProducts.map((product: any) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                hasPrevious={hasPrevious}
+                hasNext={hasNext}
+              />
             </div>
           )}
         </div>
 
         {/* Right Side - Cart / Order Panel */}
         <div className="xl:col-span-1 space-y-4">
-          <div className="sticky top-4">
+          <div className="sticky top-8">
             <div className="bg-card border border-border/50 rounded-xl shadow-xl shadow-black/5 overflow-hidden flex flex-col">
               {/* Cart Header */}
               <div className="px-5 py-4 border-b border-border/40 flex items-center justify-between flex-shrink-0">

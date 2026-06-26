@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   BookOpen,
   ShieldCheck,
@@ -21,7 +22,6 @@ import { apiService } from "@/lib/services/apiService";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
-import HomeNavbar from "@/components/layout/HomeNavbar";
 
 const sections = [
   { id: "getting-started", title: "Getting Started", icon: BookOpen },
@@ -38,7 +38,9 @@ type FormValues = {
   admin_email: string;
 };
 
-export default function DocsPage() {
+function DocsContent() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
   const [activeSection, setActiveSection] = useState("getting-started");
 
   // Registration Form Status States
@@ -47,6 +49,12 @@ export default function DocsPage() {
     text: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab && sections.some((section) => section.id === tab)) {
+      setActiveSection(tab);
+    }
+  }, [tab]);
 
   const {
     register,
@@ -97,9 +105,7 @@ export default function DocsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <HomeNavbar prop="Documentation" />
-
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 w-full">
       <div className="flex items-center gap-4 border-b border-border/50 pb-6">
         <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
           <BookOpen size={24} />
@@ -141,7 +147,7 @@ export default function DocsPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-card/30 border border-border/50 rounded-lg p-6 lg:p-10 shadow-sm min-h-[500px]">
+        <div className="flex-1 bg-card/30 border border-border/50 rounded-lg p-6 lg:p-10 shadow-sm min-h-[500px] w-full">
           {activeSection === "getting-started" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-center gap-3 mb-8">
@@ -152,7 +158,7 @@ export default function DocsPage() {
                   Getting Started
                 </h2>
               </div>
-              <div className="prose prose-slate dark:prose-invert max-w-none space-y-4">
+              <div className="prose prose-slate dark:prose-invert max-w-none space-y-4 text-sm">
                 <p className="text-muted-foreground leading-relaxed">
                   Welcome to <strong>Quantum Stack</strong>, your complete
                   solution for managing stock, tracking product lifecycles, and
@@ -161,7 +167,7 @@ export default function DocsPage() {
                 </p>
                 <div className="p-4 bg-accent/30 rounded-lg border border-border/50 mt-6">
                   <h3 className="font-bold mb-2">System Overview</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Our platform is designed around a unified dashboard,
                     enabling seamless product entry, category management, and
                     automated alerts for critical stock or expiring lots. It
@@ -192,7 +198,7 @@ export default function DocsPage() {
                     </div>
                     <h3 className="font-bold text-lg">Managing Products</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Navigate to the <strong>Products</strong> module via the
                     sidebar to view your current inventory. You can add new
                     stock, edit existing items, and specify tracking metrics
@@ -210,7 +216,7 @@ export default function DocsPage() {
                       Organizing by Categories
                     </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     The <strong>Categories</strong> section allows you to
                     logically group products. Proper categorization simplifies
                     searching and provides better analytics on the dashboard
@@ -228,7 +234,7 @@ export default function DocsPage() {
                       Critical Stock & Expiries
                     </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Under <strong>Stock Operations</strong>, you can quickly
                     monitor <em>Critical Stock</em> (items running low) and{" "}
                     <em>Expiring Lots</em>. The system automatically tracks days
@@ -244,7 +250,7 @@ export default function DocsPage() {
                     </div>
                     <h3 className="font-bold text-lg">Staff Management</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     The <strong>Staff Management</strong> panel allows
                     administrators to add team members, assign specific roles,
                     and control their access levels across the platform. This
@@ -265,9 +271,9 @@ export default function DocsPage() {
                   Terms of Use
                 </h2>
               </div>
-              <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+              <div className="space-y-6 text-xs text-muted-foreground leading-relaxed">
                 <section>
-                  <h3 className="text-foreground font-bold text-base mb-2">
+                  <h3 className="text-foreground font-bold text-sm mb-2">
                     1. Acceptance of Terms
                   </h3>
                   <p>
@@ -278,7 +284,7 @@ export default function DocsPage() {
                   </p>
                 </section>
                 <section>
-                  <h3 className="text-foreground font-bold text-base mb-2">
+                  <h3 className="text-foreground font-bold text-sm mb-2">
                     2. User Responsibilities
                   </h3>
                   <p>
@@ -289,7 +295,7 @@ export default function DocsPage() {
                   </p>
                 </section>
                 <section>
-                  <h3 className="text-foreground font-bold text-base mb-2">
+                  <h3 className="text-foreground font-bold text-sm mb-2">
                     3. Data Accuracy
                   </h3>
                   <p>
@@ -300,7 +306,7 @@ export default function DocsPage() {
                   </p>
                 </section>
                 <section>
-                  <h3 className="text-foreground font-bold text-base mb-2">
+                  <h3 className="text-foreground font-bold text-sm mb-2">
                     4. Service Availability
                   </h3>
                   <p>
@@ -325,7 +331,7 @@ export default function DocsPage() {
                 </h2>
               </div>
 
-              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+              <p className="text-xs text-muted-foreground leading-relaxed mb-6">
                 Register your business profile below to request a tenant
                 instance. Upon registration, your account is created in an{" "}
                 <strong>inactive</strong> state. Our provisioning team will
@@ -335,7 +341,7 @@ export default function DocsPage() {
 
               {statusMsg && (
                 <div
-                  className={`p-4 rounded-lg border text-sm flex gap-3 items-start animate-in fade-in duration-300 ${
+                  className={`p-4 rounded-lg border text-xs flex gap-3 items-start animate-in fade-in duration-300 ${
                     statusMsg.type === "success"
                       ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
                       : "bg-destructive/10 border-destructive/20 text-destructive-foreground"
@@ -352,7 +358,7 @@ export default function DocsPage() {
                         ? "Registration Submitted"
                         : "Registration Error"}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {statusMsg.text}
                     </p>
                   </div>
@@ -517,5 +523,13 @@ export default function DocsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DocsPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-sm font-semibold">Loading documentation...</div>}>
+      <DocsContent />
+    </Suspense>
   );
 }

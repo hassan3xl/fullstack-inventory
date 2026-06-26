@@ -25,13 +25,6 @@ DATABASES = {
     )
 }
 
-# Free-tier friendly cache
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
-}
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

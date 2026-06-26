@@ -150,3 +150,51 @@ class ResetPasswordView(APIView):
         otp_record.delete()
         
         return Response({"message": "Password reset successfully"})
+
+
+class CheckUserView(APIView):
+    """Checks whether a given email corresponds to a user who can sign in to any tenant.
+
+    POST payload: { email: string }
+
+    Response:
+      200: { allowed: bool, available_tenants: [...], detail?: string }
+      404: { detail: 'User not found' }
+      400: { detail: 'email required' }
+    """
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({"detail": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Gather tenant memberships
+        user_tenants = TenantUser.objects.filter(user=user).select_related('tenant')
+
+        available = []
+        for tu in user_tenants:
+            available.append({
+                'id': str(tu.tenant.id),
+                'name': tu.tenant.name,
+                'role': tu.role,
+                'role_display': tu.get_role_display(),
+            })
+
+        allowed = user_tenants.exists()
+
+        # If user exists but has no tenant membership, disallow login for tenant-protected flows
+        if not allowed:
+            return Response({
+                'allowed': False,
+                'available_tenants': [],
+                'detail': "This account is not associated with any store. Please contact the store owner to get access."
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            'allowed': True,
+            'available_tenants': available,
+        }, status=status.HTTP_200_OK)

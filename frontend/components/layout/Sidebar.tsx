@@ -13,12 +13,15 @@ import {
   Users,
   ShoppingCart,
   History,
+  Crown,
+  CreditCard,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGetInventoryStats } from "@/lib/hooks/product.hook";
+import { useGetStore } from "@/lib/hooks/store.hook";
 import { formatNaira } from "@/lib/utils";
 
 export default function Sidebar() {
@@ -27,6 +30,7 @@ export default function Sidebar() {
   const sidebarRef = useRef<HTMLElement>(null);
   const { data: stats } = useGetInventoryStats();
   const { user } = useAuth();
+  const { data: store } = useGetStore();
 
   const isActive = (path: string) => {
     if (path === "/") return pathname === "/";
@@ -74,7 +78,7 @@ export default function Sidebar() {
         <div className="flex-1 overflow-y-auto overscroll-contain pt-8 px-4 space-y-8 scrollbar-hide">
           {/* Control Center */}
           <div>
-            <div className="space-y-1 mt-2">
+            <div className="space-y-1">
               <Link
                 href="/dashboard"
                 onClick={closeSidebar}
@@ -248,6 +252,23 @@ export default function Sidebar() {
                 </Link>
               )}
 
+              {isBusinessAdmin && (
+                <Link
+                  href="/subscription"
+                  onClick={closeSidebar}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                    isActive("/subscription")
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <CreditCard size={18} />
+                  <span className="font-bold text-sm tracking-tight">
+                    Subscription
+                  </span>
+                </Link>
+              )}
+
               <Link
                 href="/docs"
                 onClick={closeSidebar}
@@ -265,6 +286,34 @@ export default function Sidebar() {
             </div>
           </div>
         </div>
+
+        {/* Sidebar Footer / Current Plan */}
+        {/* {store && (
+          <div className="p-4 border-t border-border/50 bg-accent/20 m-4 rounded-xl shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 animate-pulse">
+                <Crown size={16} className="text-yellow-500 fill-yellow-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                  Current Plan
+                </p>
+                <p className="text-xs font-bold text-foreground truncate capitalize">
+                  {store.current_plan?.name || "Free Plan"}
+                </p>
+              </div>
+            </div>
+            {isBusinessAdmin && (
+              <Link
+                href="/subscription"
+                onClick={closeSidebar}
+                className="mt-3 block text-center text-[11px] font-black uppercase tracking-wider text-primary hover:text-primary/80 transition-colors"
+              >
+                Manage Subscription →
+              </Link>
+            )}
+          </div>
+        )} */}
       </aside>
     </>
   );

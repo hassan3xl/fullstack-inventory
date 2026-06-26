@@ -63,4 +63,24 @@ export const StoreApi = {
       throw error;
     }
   },
+
+  getSubscriptionPlans: async () => {
+    try {
+      const res = await apiService.get("/tenants/plans/");
+      return res;
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      throw error;
+    }
+  },
+
+  subscribeToPlan: async (planSlug: string) => {
+    try {
+      const res = await apiService.post("/tenants/subscribe/", { plan_slug: planSlug });
+      return res;
+    } catch (error) {
+      console.error("Error subscribing to plan:", error);
+      throw error;
+    }
+  },
 };

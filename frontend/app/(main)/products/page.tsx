@@ -5,14 +5,18 @@ import Header from "@/components/Header";
 import ProductForm from "@/components/forms/ProductForm";
 import ProductCard from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
-import { useGetProducts } from "@/lib/hooks/product.hook";
+import {
+  useGetProducts,
+  useGetInventoryStats,
+  useGetProductsCategories,
+} from "@/lib/hooks/product.hook";
 import { Package, Search } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Loading from "@/components/Loader";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
+import { Pagination } from "@/components/ui/Pagination";
 
 const ProductsInventory: React.FC = () => {
-  const { data: products, refetch, isLoading } = useGetProducts();
   const { config } = useBusinessConfig();
   const showExpiry = config.features.expiryTracking;
   const searchParams = useSearchParams();
@@ -23,110 +27,66 @@ const ProductsInventory: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [activeStatusFilter, setActiveStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
 
+  // Set initial filters based on search params
   useEffect(() => {
     if (filterParam) {
       setStockFilter(filterParam);
     }
   }, [filterParam]);
 
+  // Reset page to 1 whenever any filters change to prevent empty state bugs
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, filterCategory, stockFilter, activeStatusFilter]);
+
+  // Map client-side stockFilter to backend status query parameters
+  const statusParam = useMemo(() => {
+    if (stockFilter === "low-stock") return "low";
+    if (stockFilter === "out-of-stock") return "out_of_stock";
+    if (stockFilter === "expiring") return "near_expiry";
+    return undefined;
+  }, [stockFilter]);
+
+  // Fetch paginated products from server
+  const { data, refetch, isLoading } = useGetProducts({
+    page,
+    page_size: 10,
+    search: searchTerm.trim() || undefined,
+    category: filterCategory === "all" ? undefined : filterCategory,
+    status: statusParam,
+    active_status:
+      activeStatusFilter === "all" ? undefined : activeStatusFilter,
+  });
+
+  // Fetch stats and categories directly from server
+  const { data: invStats } = useGetInventoryStats();
+  const { data: categoriesData } = useGetProductsCategories();
+
   const categories = useMemo(() => {
-    if (!products) return [];
-    // Ensure products is an array
-    const productsArray = Array.isArray(products) ? products : [];
-    return Array.from(
-      new Set(
-        productsArray.map((p: any) => p.category?.name || "Uncategorized"),
-      ),
-    );
-  }, [products]);
+    if (!categoriesData) return [];
+    return Array.from(new Set(categoriesData.map((c: any) => c.name)));
+  }, [categoriesData]);
 
-  const filteredProducts = useMemo(() => {
-    if (!products) return [];
-    const productsArray = Array.isArray(products) ? products : [];
-    const q = searchTerm.trim().toLowerCase();
+  // Read response structure from DRF PageNumberPagination
+  const productsArray = data?.results || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / 10);
+  const hasPrevious = !!data?.previous;
+  const hasNext = !!data?.next;
 
-    return productsArray.filter((product: any) => {
-      const matchesSearch =
-        !q || (product.name || "").toLowerCase().includes(q);
-      const matchesCategory =
-        filterCategory === "all" || product.category?.name === filterCategory;
-
-      // Stock filtering
-      const stockCount = product.stock ?? 0;
-
-      const isExpiringSoon =
-        product.expiry_date &&
-        !product.is_expired &&
-        (new Date(product.expiry_date).getTime() - new Date().getTime()) /
-          (1000 * 60 * 60 * 24) <=
-          7;
-
-      const matchesStock =
-        stockFilter === "all" ||
-        (stockFilter === "in-stock" && stockCount > 0) ||
-        (stockFilter === "low-stock" && stockCount > 0 && stockCount < 10) ||
-        (stockFilter === "out-of-stock" && stockCount === 0) ||
-        (stockFilter === "expiring" && isExpiringSoon);
-
-      const matchesActive =
-        activeStatusFilter === "all" ||
-        (activeStatusFilter === "active" && product.is_active !== false) ||
-        (activeStatusFilter === "inactive" && product.is_active === false);
-
-      return matchesSearch && matchesCategory && matchesStock && matchesActive;
-    });
-  }, [products, searchTerm, filterCategory, stockFilter, activeStatusFilter]);
-
-  const totalProducts = useMemo(
-    () => (Array.isArray(products) ? products.length : 0),
-    [products],
-  );
-
-  const inStock = useMemo(
-    () =>
-      Array.isArray(products)
-        ? products.filter((p: any) => (p.stock ?? 0) > 0).length
-        : 0,
-    [products],
-  );
-
-  const lowStock = useMemo(
-    () =>
-      Array.isArray(products)
-        ? products.filter((p: any) => (p.stock ?? 0) > 0 && (p.stock ?? 0) < 10)
-            .length
-        : 0,
-    [products],
-  );
-
-  const outOfStock = useMemo(
-    () =>
-      Array.isArray(products)
-        ? products.filter((p: any) => (p.stock ?? 0) === 0).length
-        : 0,
-    [products],
-  );
-
-  const expiringSoonCount = useMemo(
-    () =>
-      Array.isArray(products)
-        ? products.filter((p: any) => {
-            if (!p.expiry_date || p.is_expired) return false;
-            const daysLeft =
-              (new Date(p.expiry_date).getTime() - new Date().getTime()) /
-              (1000 * 60 * 60 * 24);
-            return daysLeft <= 7;
-          }).length
-        : 0,
-    [products],
-  );
+  const totalProducts = invStats?.product_count || 0;
+  const outOfStock = invStats?.out_of_stock || 0;
+  const inStock = Math.max(0, totalProducts - outOfStock);
+  const lowStock = invStats?.low_stock || 0;
+  const expiringSoonCount = invStats?.near_expiry || 0;
 
   const handleProductUpdate = () => {
     refetch();
   };
+
   if (isLoading) return <Loading />;
-  if (!products) return null;
 
   return (
     <div className="space-y-8 pb-12">
@@ -135,7 +95,12 @@ const ProductsInventory: React.FC = () => {
         closeModal={() => setIsModalOpen(false)}
         onProductAdded={handleProductUpdate}
       />
-      {Array.isArray(products) && products.length === 0 ? (
+
+      {totalCount === 0 &&
+      searchTerm === "" &&
+      filterCategory === "all" &&
+      stockFilter === "all" &&
+      activeStatusFilter === "all" ? (
         <div className="flex flex-col gap-4 justify-center items-center h-[60vh]">
           <Package className="w-16 h-16 text-muted-foreground/20" />
           <p className="text-muted-foreground font-bold italic">
@@ -180,7 +145,7 @@ const ProductsInventory: React.FC = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <input
                 type="text"
-                placeholder="Deep search by SKU, Name, or Batch ID..."
+                placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-transparent rounded-lg focus:bg-background focus:border-primary/20 transition-all text-sm font-medium"
@@ -224,16 +189,27 @@ const ProductsInventory: React.FC = () => {
           </div>
 
           {/* Product Grid */}
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.map((product: any) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  merchantView={true}
-                />
-              ))}
-            </div>
+          {productsArray.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {productsArray.map((product: any) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    merchantView={true}
+                  />
+                ))}
+              </div>
+
+              {/* Navigation component */}
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                hasPrevious={hasPrevious}
+                hasNext={hasNext}
+              />
+            </>
           ) : (
             <div className="flex flex-col justify-center items-center h-[40vh] bg-muted/5 rounded-[3rem] border border-dashed border-border">
               <p className="text-muted-foreground font-black text-sm uppercase tracking-widest">

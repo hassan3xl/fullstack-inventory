@@ -8,7 +8,11 @@ interface User {
   email: string;
 }
 
-export async function handleLogin(user: User, accessToken: string) {
+export async function handleLogin(
+  user: User,
+  accessToken: string,
+  rolesOrMeta?: any,
+) {
   const isLocal = process.env.NODE_ENV !== "production";
   const cookieOptions = {
     path: "/",
@@ -16,7 +20,7 @@ export async function handleLogin(user: User, accessToken: string) {
     sameSite: "lax" as const,
     secure: !isLocal,
     // For local dev, we don't set domain to avoid browser rejection of ".localhost"
-    domain: isLocal ? undefined : undefined, 
+    domain: isLocal ? undefined : undefined,
   };
 
   const cookieStore = await cookies();
@@ -29,6 +33,19 @@ export async function handleLogin(user: User, accessToken: string) {
     ...cookieOptions,
     httpOnly: false,
   });
+
+  // Save roles or metadata if provided
+  if (rolesOrMeta) {
+    try {
+      cookieStore.set(
+        "session_roles",
+        JSON.stringify(rolesOrMeta),
+        cookieOptions,
+      );
+    } catch (e) {
+      // swallow cookie serialization errors
+    }
+  }
 }
 
 export async function getAccessToken(): Promise<string | null> {
@@ -44,4 +61,5 @@ export async function resetAuthCookies() {
   const cookieStore = await cookies();
   cookieStore.set("session_user", "", { maxAge: 0, path: "/" });
   cookieStore.set("session_access_token", "", { maxAge: 0, path: "/" });
+  cookieStore.set("session_roles", "", { maxAge: 0, path: "/" });
 }
