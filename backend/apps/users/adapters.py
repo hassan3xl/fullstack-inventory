@@ -2,6 +2,25 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from apps.users.models.profiles import Profile
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
+    def pre_social_login(self, request, sociallogin):
+        """
+        Connect social account to existing user with the same email address.
+        """
+        if sociallogin.is_existing:
+            return
+
+        email = sociallogin.user.email
+        if not email:
+            return
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            user = User.objects.get(email__iexact=email)
+            sociallogin.connect(request, user)
+        except User.DoesNotExist:
+            pass
+
     def save_user(self, request, sociallogin, form=None):
         user = super().save_user(request, sociallogin, form)
         

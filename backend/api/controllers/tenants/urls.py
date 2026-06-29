@@ -10,6 +10,8 @@ from .views import (
     VerifyStoreAPIView,
     LinkPremiumStoreAPIView,
     UnlinkPremiumStoreAPIView,
+    CreateBranchAPIView,
+    ListBranchesAPIView,
 )
 
 urlpatterns = [
@@ -23,4 +25,6 @@ urlpatterns = [
     path('verify-store/', VerifyStoreAPIView.as_view(), name='api-tenant-verify-store'),
     path('link-store/', LinkPremiumStoreAPIView.as_view(), name='api-tenant-link-store'),
     path('unlink-store/', UnlinkPremiumStoreAPIView.as_view(), name='api-tenant-unlink-store'),
+    path('branches/', ListBranchesAPIView.as_view(), name='api-tenant-branches'),
+    path('branches/create/', CreateBranchAPIView.as_view(), name='api-tenant-branches-create'),
 ]

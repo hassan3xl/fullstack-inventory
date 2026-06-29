@@ -10,16 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "@/lib/services/apiService";
 import { QUERY_KEYS } from "@/lib/hooks/queryKeys";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -95,10 +86,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
       closeModal();
     },
     onError: (error: any) => {
-      const errorMsg =
-        error?.response?.data?.error ||
-        error?.response?.data?.detail ||
-        "Failed to add staff.";
+      const errorMsg = error?.detail || "Failed to add staff.";
       toast.error("Error adding staff", { description: errorMsg });
     },
   });
@@ -232,8 +220,8 @@ const StaffForm: React.FC<StaffFormProps> = ({
             ]}
           />
 
-          <div className="flex flex-col gap-2 pt-4 border-t border-border/30">
-            <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex mt-8 flex-col gap-2 pt-4 border-t border-border/30">
+            <div className="flex mt-6 flex-col sm:flex-row gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -257,7 +245,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               </Button>
             </div>
 
-            {isEditMode && selectedStaff?.role !== "owner" && (
+            {isEditMode && selectedStaff?.role !== "owner" && !showDeleteConfirm && (
               <Button
                 type="button"
                 variant="destructive"
@@ -275,44 +263,41 @@ const StaffForm: React.FC<StaffFormProps> = ({
                 )}
               </Button>
             )}
+
+            {isEditMode && showDeleteConfirm && (
+              <div className="mt-4 p-4 rounded-xl border border-red-200 bg-red-50/50 space-y-3 dark:bg-red-950/20 dark:border-red-900/30">
+                <div className="text-xs font-semibold text-red-800 dark:text-red-400">
+                  Are you sure you want to remove <span className="font-extrabold">{selectedStaff?.full_name || selectedStaff?.email}</span>?
+                  This will immediately revoke their store access privileges.
+                </div>
+                <div className="flex gap-2.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 h-9 text-xs rounded-lg cursor-pointer bg-background hover:bg-muted"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleRemoveStaff}
+                    disabled={removeStaffMutation.isPending}
+                    className="flex-1 h-9 text-xs rounded-lg cursor-pointer font-bold"
+                  >
+                    {removeStaffMutation.isPending ? (
+                      <Loader2 className="animate-spin mr-1 w-3 h-3" />
+                    ) : (
+                      "Confirm Revocation"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </form>
       </BaseModal>
-
-      {/* Revocation Confirmation Dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="rounded-lg p-8 border-border">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black">
-              Revoke System Access
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-base font-medium">
-              Are you sure you want to remove this staff member? This will
-              revoke all access privileges to the platform.
-              {selectedStaff && (
-                <div className="mt-4 p-4 rounded-lg bg-red-50 border border-red-100 font-bold text-red-700">
-                  {selectedStaff.full_name || selectedStaff.email}
-                </div>
-              )}
-              This operation is final and will log the revocation event.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-8 gap-3">
-            <AlertDialogCancel
-              onClick={() => setShowDeleteConfirm(false)}
-              className="rounded-lg h-12 px-6 font-bold border-border cursor-pointer"
-            >
-              Cancel Action
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemoveStaff}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-lg h-12 px-6 font-black cursor-pointer"
-            >
-              Confirm Revocation
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };

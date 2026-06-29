@@ -15,6 +15,7 @@ import {
   Crown,
   CreditCard,
   Lock,
+  User2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,7 +31,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const sidebarRef = useRef<HTMLElement>(null);
   const { data: stats } = useGetInventoryStats();
-  const { user } = useAuth();
+  const { user, isOwner, isAdmin, isManager, isCashier, storeRole } = useAuth();
   const { data: store } = useGetStore();
 
   const isActive = (path: string) => {
@@ -39,16 +40,12 @@ export default function Sidebar() {
   };
 
   // Role/Permission-based guards
-  const permissions = user?.permissions;
-  const isBusinessAdmin = user?.role === "is_owner" || permissions?.is_admin;
   const isFreePlan = store?.current_plan?.slug === "free";
 
-  const canViewCategories = isBusinessAdmin || permissions?.is_manager;
-  const canViewStaff =
-    isBusinessAdmin || permissions?.is_admin || permissions?.is_owner;
-  const canViewSettings =
-    isBusinessAdmin || permissions?.is_admin || permissions?.is_owner;
-  const canViewPOS = isBusinessAdmin || permissions?.is_cashier;
+  const canViewCategories = isAdmin || isManager;
+  const canViewStaff = isAdmin;
+  const canViewSettings = isAdmin;
+  const canViewPOS = isCashier;
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -206,7 +203,8 @@ export default function Sidebar() {
                   onClick={() => {
                     closeSidebar();
                     toast.error("CRM & Customers is Premium", {
-                      description: "Upgrade your plan to Basic or above to manage customers.",
+                      description:
+                        "Upgrade your plan to Basic or above to manage customers.",
                     });
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
@@ -215,7 +213,10 @@ export default function Sidebar() {
                   <span className="font-bold text-sm tracking-tight text-left flex-1">
                     Customers
                   </span>
-                  <Lock size={14} className="text-muted-foreground/45 shrink-0" />
+                  <Lock
+                    size={14}
+                    className="text-muted-foreground/45 shrink-0"
+                  />
                 </button>
               ) : (
                 <Link
@@ -234,13 +235,14 @@ export default function Sidebar() {
                 </Link>
               )}
 
-              {isBusinessAdmin && (
-                isFreePlan ? (
+              {isAdmin &&
+                (isFreePlan ? (
                   <button
                     onClick={() => {
                       closeSidebar();
                       toast.error("Finance Tracker is Premium", {
-                        description: "Upgrade your plan to Basic or above to access finance & accounting.",
+                        description:
+                          "Upgrade your plan to Basic or above to access finance & accounting.",
                       });
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
@@ -249,7 +251,10 @@ export default function Sidebar() {
                     <span className="font-bold text-sm tracking-tight text-left flex-1">
                       Finance
                     </span>
-                    <Lock size={14} className="text-muted-foreground/45 shrink-0" />
+                    <Lock
+                      size={14}
+                      className="text-muted-foreground/45 shrink-0"
+                    />
                   </button>
                 ) : (
                   <Link
@@ -266,8 +271,7 @@ export default function Sidebar() {
                       Finance
                     </span>
                   </Link>
-                )
-              )}
+                ))}
             </div>
           </div>
 
@@ -291,7 +295,7 @@ export default function Sidebar() {
                 </Link>
               )}
 
-              {isBusinessAdmin && (
+              {isAdmin && (
                 <Link
                   href="/subscription"
                   onClick={closeSidebar}
@@ -307,21 +311,6 @@ export default function Sidebar() {
                   </span>
                 </Link>
               )}
-
-              <Link
-                href="/docs"
-                onClick={closeSidebar}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                  isActive("/docs")
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <HelpCircle size={18} />
-                <span className="font-bold text-sm tracking-tight">
-                  Documentation
-                </span>
-              </Link>
             </div>
           </div>
         </div>
@@ -342,7 +331,7 @@ export default function Sidebar() {
                 </p>
               </div>
             </div>
-            {isBusinessAdmin && (
+            {isAdmin && (
               <Link
                 href="/subscription"
                 onClick={closeSidebar}

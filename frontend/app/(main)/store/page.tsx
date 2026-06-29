@@ -1,37 +1,20 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React from "react";
 import Image from "next/image";
 import {
-  Camera,
   ShieldCheck,
   Activity,
   CalendarDays,
   Crown,
-  Edit3,
-  Check,
-  X,
-  Bell,
-  Lock,
   Tag,
   Layers,
   Cpu,
-  Info,
-  AlertTriangle,
   Store,
-  CreditCard,
+  Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  useGetStore,
-  useUpdateStore,
-  useUpdateStoreLogo,
-  useGetSubscriptionPlans,
-  useSubscribeToPlan,
-} from "@/lib/hooks/store.hook";
+import { useGetStore } from "@/lib/hooks/store.hook";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
-import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import Loader from "@/components/Loader";
@@ -45,14 +28,14 @@ const CapabilityPill = ({
   enabled: boolean;
 }) => (
   <span
-    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-300 ${
       enabled
-        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-        : "bg-muted/60 text-muted-foreground/60 border-border/40 line-through"
+        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-sm"
+        : "bg-muted/40 text-muted-foreground/50 border-border/20 line-through"
     }`}
   >
     <span
-      className={`w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
+      className={`w-1.5 h-1.5 rounded-full ${enabled ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/30"}`}
     />
     {label}
   </span>
@@ -70,9 +53,9 @@ const InfoRow = ({
   value: React.ReactNode;
   mono?: boolean;
 }) => (
-  <div className="flex items-start gap-4 py-4 border-b border-border/40 last:border-0">
-    <div className="w-9 h-9 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
-      <Icon className="w-4 h-4 text-muted-foreground" />
+  <div className="flex items-start gap-4 py-4 border-b border-border/40 last:border-0 hover:bg-muted/10 px-2 rounded-xl transition-all duration-200">
+    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+      <Icon className="w-4 h-4" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">
@@ -87,160 +70,17 @@ const InfoRow = ({
   </div>
 );
 
-export default function StoreSettingsPage() {
+export default function StoreProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const permissions = user?.permissions;
-  const isOwner = permissions?.is_owner || user?.role === "is_owner";
-  const isAdmin = permissions?.is_admin;
-  const isAuthorized = isOwner || isAdmin;
-
   const { data: store, isLoading: storeLoading } = useGetStore();
   const { config } = useBusinessConfig();
-  const { data: plans } = useGetSubscriptionPlans();
 
-  const updateStoreMutation = useUpdateStore();
-  const updateLogoMutation = useUpdateStoreLogo();
-  const subscribeMutation = useSubscribeToPlan();
+  const platformRole = (user?.role ||
+    user?.permissions?.platform_role ||
+    null) as string | null;
+  const isPlatformAdmin = platformRole === "platform_admin";
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-
-  const [isHoveringLogo, setIsHoveringLogo] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState("");
-  const [showNameWarning, setShowNameWarning] = useState(false);
-
-  // Sync name field when store data loads
-  useEffect(() => {
-    if (store?.name) setNameValue(store.name);
-  }, [store?.name]);
-
-  // Auto-focus input when editing starts
-  useEffect(() => {
-    if (isEditingName) nameInputRef.current?.focus();
-  }, [isEditingName]);
-
-  // Authorization Redirect Guard
-  useEffect(() => {
-    if (!authLoading && !isAuthorized) {
-      toast.error("Access Denied", {
-        description:
-          "Only store owners and administrators can access store profile settings.",
-      });
-      window.location.href = "/dashboard";
-    }
-  }, [authLoading, isAuthorized]);
-
-  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append("logo", file);
-    try {
-      await updateLogoMutation.mutateAsync(fd);
-      toast.success("Logo updated successfully", {
-        description: "Your business logo has been refreshed.",
-      });
-    } catch {
-      toast.error("Upload failed", {
-        description: "Please try a different image file.",
-      });
-    }
-  };
-
-  const handleNameSave = async () => {
-    const trimmed = nameValue.trim();
-    if (!trimmed) {
-      toast.error("Store name cannot be empty.");
-      return;
-    }
-    if (trimmed === store?.name) {
-      setIsEditingName(false);
-      return;
-    }
-    try {
-      await updateStoreMutation.mutateAsync({ name: trimmed });
-      toast.success("Store name updated", {
-        description:
-          "All staff and the platform admin have been notified of this change.",
-        icon: "🔔",
-        duration: 5000,
-      });
-      setIsEditingName(false);
-      setShowNameWarning(false);
-    } catch {
-      toast.error("Update failed", {
-        description: "Could not save the new store name. Please try again.",
-      });
-    }
-  };
-
-  const handleNameCancel = () => {
-    setNameValue(store?.name || "");
-    setIsEditingName(false);
-    setShowNameWarning(false);
-  };
-
-  const handleSubscribe = async (planSlug: string) => {
-    try {
-      await subscribeMutation.mutateAsync(planSlug);
-      toast.success("Subscription updated successfully", {
-        description: `Your store is now on the ${planSlug} plan.`,
-      });
-    } catch {
-      toast.error("Subscription failed", {
-        description: "Please try again later.",
-      });
-    }
-  };
-
-  const getPlanFeatures = (plan: any) => {
-    const list: string[] = [];
-
-    if (plan.max_products !== undefined && plan.max_products !== null) {
-      list.push(
-        plan.max_products === -1
-          ? "Unlimited Products"
-          : `Up to ${plan.max_products} Products`,
-      );
-    }
-    if (plan.max_staff !== undefined && plan.max_staff !== null) {
-      list.push(
-        plan.max_staff === -1
-          ? "Unlimited Staff Members"
-          : `Up to ${plan.max_staff} Staff Members`,
-      );
-    }
-    if (plan.has_customers) {
-      list.push("Customer Directory & History");
-    }
-    if (plan.has_analytics) {
-      list.push("Real-time Analytics & Finance Reports");
-    }
-
-    if (list.length === 0) {
-      if (plan.slug === "free") {
-        return [
-          "Up to 50 Products",
-          "Up to 3 Staff Members",
-          "Basic POS & Checkout",
-          "Email Notifications",
-        ];
-      }
-      return [
-        "Unlimited Products",
-        "Unlimited Staff Members",
-        "Advanced POS & Multi-register",
-        "Priority Email & Chat Support",
-        "Custom Branding & Invoice Logo",
-        "Real-time Analytics & Finance Reports",
-      ];
-    }
-
-    return list;
-  };
-
-  if (authLoading || !isAuthorized || storeLoading) {
+  if (authLoading || storeLoading) {
     return <Loader />;
   }
 
@@ -253,195 +93,52 @@ export default function StoreSettingsPage() {
     );
   }
 
-  const isDirty = nameValue.trim() !== store.name;
-
   return (
-    <div className="space-y-4">
-      {/* ── Top Header / Responsive Action Row ────────────────────────── */}
+    <div className="space-y-6">
+      {/* ── Top Header ────────────────────────── */}
       <Header
-        title="Store Profile & Settings"
-        subtitle="Manage your business details, branding logo, and subscription plan options."
-        actions={
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 font-bold text-xs sm:text-sm h-10 px-4 rounded-xl cursor-pointer bg-background hover:bg-muted shrink-0"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={updateLogoMutation.isPending}
-            >
-              <Camera className="w-4 h-4 text-primary" />
-              {updateLogoMutation.isPending ? "Uploading…" : "Upload Logo"}
-            </Button>
-            {isOwner && (
-              <Button
-                className="flex items-center gap-2 font-bold text-xs sm:text-sm h-10 px-4 rounded-xl cursor-pointer shrink-0"
-                onClick={() => setIsEditingName(true)}
-                disabled={isEditingName}
-              >
-                <Edit3 className="w-4 h-4" />
-                Rename Store
-              </Button>
-            )}
-          </div>
-        }
+        title="Store Profile"
+        subtitle="View your business identity, details, capabilities, and subscription tier."
       />
 
-      {/* Hidden file input for logo upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleLogoChange}
-      />
-
-      {/* ── Hero Banner with Logo & Editable Store Name ───────────────── */}
+      {/* ── Cohesive Store Profile Card ───────────────── */}
       <div className="relative rounded-2xl overflow-hidden border border-border/50 bg-card shadow-sm">
-        {/* Decorative background blur blobs */}
-        <div className="absolute top-0 right-0 w-96 h-96 -mt-32 -mr-32 bg-primary/8 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 -mb-20 -ml-20 bg-blue-500/8 blur-[100px] rounded-full pointer-events-none" />
+        {/* Cover Banner */}
+        <div className="h-40 w-full bg-gradient-to-r from-primary/15 via-primary/5 to-blue-500/15 relative overflow-hidden border-b border-border/40">
+          <div className="absolute top-0 right-0 w-96 h-96 -mt-32 -mr-32 bg-primary/20 blur-[80px] rounded-full pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 -mb-20 -ml-20 bg-blue-500/20 blur-[80px] rounded-full pointer-events-none" />
+        </div>
 
-        <div className="relative z-10 p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
-          {/* Logo upload (Clickable overlay + hover effect) */}
-          <div
-            className="relative group cursor-pointer shrink-0"
-            onMouseEnter={() => setIsHoveringLogo(true)}
-            onMouseLeave={() => setIsHoveringLogo(false)}
-            onClick={() => fileInputRef.current?.click()}
-            title="Click to update store logo"
-          >
-            {/* Glow ring */}
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-primary to-blue-500 rounded-full blur opacity-25 group-hover:opacity-50 transition-opacity duration-500" />
-            <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden border-4 border-background shadow-xl bg-muted flex items-center justify-center">
-              {updateLogoMutation.isPending ? (
-                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-              ) : (
-                <Image
-                  src={store.logo || "/placeholder.png"}
-                  alt={store.name}
-                  fill
-                  unoptimized
-                  className={`object-cover transition-all duration-500 ${isHoveringLogo ? "scale-105 brightness-50" : "scale-100"}`}
-                />
-              )}
-              <div
-                className={`absolute inset-0 flex flex-col items-center justify-center text-white gap-1 transition-opacity duration-300 ${isHoveringLogo && !updateLogoMutation.isPending ? "opacity-100" : "opacity-0"}`}
-              >
-                <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
-                <span className="text-[9px] font-black uppercase tracking-wider">
-                  Change Logo
+        {/* Profile Content Container */}
+        <div className="px-6 pb-8 pt-0 sm:px-8 relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6">
+          {/* Logo container */}
+          <div className="relative -mt-16 shrink-0">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-blue-500 rounded-full blur-md opacity-30" />
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-card shadow-lg bg-muted flex items-center justify-center">
+              <Image
+                src={store.logo || "/placeholder.png"}
+                alt={store.name}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Details & Info area */}
+          <div className="flex-1 flex flex-col md:flex-row md:items-end justify-between gap-6 w-full text-center md:text-left">
+            <div className="space-y-3 min-w-0">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-foreground">
+                  {store.name}
+                </h1>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                <span className="text-xs text-muted-foreground font-semibold bg-muted/65 px-2.5 py-1 rounded-full">
+                  {store.category || "General Business"}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Name + meta */}
-          <div className="flex-1 min-w-0 text-center md:text-left pt-2">
-            {/* Editable name row */}
-            <div className="flex items-center gap-3 justify-center md:justify-start mb-3 flex-wrap">
-              <AnimatePresence mode="wait">
-                {isEditingName ? (
-                  <motion.div
-                    key="edit"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    className="flex items-center gap-2 w-full max-w-md"
-                  >
-                    <input
-                      ref={nameInputRef}
-                      value={nameValue}
-                      onChange={(e) => {
-                        setNameValue(e.target.value);
-                        setShowNameWarning(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleNameSave();
-                        if (e.key === "Escape") handleNameCancel();
-                      }}
-                      className="flex-1 text-xl sm:text-2xl md:text-3xl font-black bg-background border-2 border-primary/45 focus:border-primary rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 outline-none transition-colors"
-                      placeholder="Store name…"
-                      maxLength={80}
-                    />
-                    <button
-                      onClick={handleNameSave}
-                      disabled={updateStoreMutation.isPending || !isDirty}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
-                    >
-                      {updateStoreMutation.isPending ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={handleNameCancel}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer shrink-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="display"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="flex items-center gap-2.5 group/name"
-                  >
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-foreground">
-                      {store.name}
-                    </h1>
-                    {isOwner && (
-                      <button
-                        onClick={() => setIsEditingName(true)}
-                        className="w-8 h-8 rounded-lg bg-muted/0 hover:bg-muted text-muted-foreground/0 group-hover/name:text-muted-foreground flex items-center justify-center transition-all duration-200 cursor-pointer shrink-0"
-                        title="Edit store name"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {store.is_active && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-wider border border-emerald-500/20 shrink-0">
-                  <ShieldCheck className="w-3 h-3" />
-                  Active
-                </span>
-              )}
-            </div>
-
-            {/* Notification warning banner when editing */}
-            <AnimatePresence>
-              {showNameWarning && isEditingName && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/25 rounded-xl px-4 py-3 text-amber-700 dark:text-amber-400 max-w-md text-left mx-auto md:mx-0"
-                >
-                  <Bell className="w-4 h-4 shrink-0 mt-0.5" />
-                  <p className="text-xs font-semibold leading-relaxed">
-                    Saving this will automatically notify the{" "}
-                    <strong>platform administrator</strong>,{" "}
-                    <strong>store admin</strong>, and all{" "}
-                    <strong>active staff members</strong>.
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Business type badges */}
-            <div className="flex items-center gap-2 justify-center md:justify-start flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-                <Layers className="w-3 h-3" />
-                {config.displayName}
-              </span>
-              <span className="text-xs text-muted-foreground font-semibold bg-muted/65 px-2.5 py-1 rounded-full">
-                {store.category}
-              </span>
             </div>
           </div>
         </div>
@@ -451,7 +148,6 @@ export default function StoreSettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left col: store details (3/5) */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Store info card */}
           <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-border/40 flex items-center gap-2">
               <Store className="w-4 h-4 text-muted-foreground" />
@@ -459,7 +155,7 @@ export default function StoreSettingsPage() {
                 Store Details
               </h2>
             </div>
-            <div className="px-6">
+            <div className="px-6 py-2">
               <InfoRow
                 icon={Tag}
                 label="Business Classification"
@@ -494,18 +190,63 @@ export default function StoreSettingsPage() {
                   day: "numeric",
                 })}
               />
-              <InfoRow
-                icon={Crown}
-                label="Internal Workspace ID"
-                value={store.id}
-                mono
-              />
             </div>
           </div>
         </div>
 
-        {/* Right col: capabilities + owner info (2/5) */}
+        {/* Right col: capabilities + subscription (2/5) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Subscription Info Card */}
+          {store.current_plan && (
+            <div className="bg-gradient-to-br from-primary/10 to-blue-500/5 rounded-2xl border border-primary/20 shadow-sm overflow-hidden relative">
+              <div className="px-6 py-4 border-b border-primary/15 flex items-center gap-2">
+                <h2 className="font-black text-xs uppercase tracking-widest text-primary">
+                  Subscription Tier
+                </h2>
+              </div>
+              <div className="px-6 py-5 space-y-4">
+                <div>
+                  <p className="text-2xl font-black text-foreground capitalize mt-0.5">
+                    {store.current_plan.name}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-border/40">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-semibold">
+                      Max Products
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {store.current_plan.max_products === -1
+                        ? "Unlimited"
+                        : store.current_plan.max_products}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-semibold">
+                      Max Staff Members
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {store.current_plan.max_staff === -1
+                        ? "Unlimited"
+                        : store.current_plan.max_staff}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-semibold">
+                      Custom Subdomain
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {store.current_plan.has_subdomain
+                        ? "Supported"
+                        : "Not Supported"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Store capabilities */}
           <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-border/40 flex items-center gap-2">
@@ -515,8 +256,8 @@ export default function StoreSettingsPage() {
               </h2>
             </div>
             <div className="px-6 py-5 space-y-3">
-              <p className="text-xs text-muted-foreground font-medium">
-                Active features configuration:
+              <p className="text-xs text-muted-foreground font-medium animate-pulse">
+                Active feature configuration:
               </p>
               <div className="flex flex-wrap gap-2">
                 <CapabilityPill
@@ -554,46 +295,6 @@ export default function StoreSettingsPage() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Notification info card */}
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-amber-500/15 flex items-center gap-2">
-              <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <h2 className="font-black text-xs uppercase tracking-widest text-amber-700 dark:text-amber-400">
-                Name Change Alerts
-              </h2>
-            </div>
-            <div className="px-6 py-5 space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                When the store name is updated, notifications will be sent
-                directly to:
-              </p>
-              <ul className="space-y-2">
-                {[
-                  "Platform Administrator",
-                  "Store Owner / Admin account",
-                  "All active staff members",
-                ].map((r) => (
-                  <li
-                    key={r}
-                    className="flex items-center gap-2.5 text-xs font-bold text-foreground"
-                  >
-                    <span className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                      <Bell className="w-3 h-3" />
-                    </span>
-                    {r}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-start gap-2 pt-2 border-t border-amber-500/10">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground leading-normal">
-                  All updates are audited. Avoid frequent modifications to
-                  prevent disruption or confusion.
-                </p>
-              </div>
             </div>
           </div>
         </div>

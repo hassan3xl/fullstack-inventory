@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Key, Mail } from "lucide-react";
+import { Key, Mail, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { handleLogin } from "@/lib/actions/auth.actions";
+import { handleLogin, setActiveTenantCookie } from "@/lib/actions/auth.actions";
 import { apiService, getBackendErrorMessage } from "@/lib/services/apiService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -16,13 +16,17 @@ type FormValues = {
   password: string;
 };
 
+type Step = "email" | "password" | "store-select";
+
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<"email" | "password">("email");
+  const [step, setStep] = useState<Step>("email");
   const [emailValue, setEmailValue] = useState("");
   const [allowLoginMeta, setAllowLoginMeta] = useState<any>(null);
   const [lastCheckedEmail, setLastCheckedEmail] = useState<string | null>(null);
   const [lastCheckResp, setLastCheckResp] = useState<any>(null);
+  const [availableTenants, setAvailableTenants] = useState<any[]>([]);
+  const [selectingTenant, setSelectingTenant] = useState<string | null>(null);
 
   const {
     register,
@@ -31,12 +35,64 @@ export default function LoginForm() {
     formState: { isSubmitting },
   } = useForm<FormValues>();
 
+  const handleSuccessLogin = async (response: any) => {
+    try {
+      await handleLogin(
+        response.user,
+        response.access,
+        allowLoginMeta ?? response.user?.roles ?? null
+      );
+
+      const tenants = response.available_tenants || [];
+      
+      if (tenants.length > 1) {
+        setAvailableTenants(tenants);
+        setStep("store-select");
+        setIsLoading(false);
+      } else {
+        toast.success("Login successful!", {
+          description: "Welcome back!",
+        });
+        const hasTenants = tenants.length > 0;
+        if (hasTenants) {
+          await setActiveTenantCookie(tenants[0].id);
+        }
+        setTimeout(() => {
+          if (!hasTenants && response.user?.role !== "platform_admin") {
+            window.location.href = "/onboarding";
+          } else {
+            window.location.href = "/dashboard";
+          }
+        }, 1000);
+      }
+    } catch (err: any) {
+      toast.error("Session configuration failed");
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectStore = async (tenantId: string) => {
+    setSelectingTenant(tenantId);
+    try {
+      await setActiveTenantCookie(tenantId);
+      toast.success("Store selected! Redirecting...", {
+        description: "Loading your dashboard catalog.",
+      });
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1000);
+    } catch (err) {
+      toast.error("Failed to select store");
+    } finally {
+      setSelectingTenant(null);
+    }
+  };
+
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
 
     try {
       if (step === "email") {
-        // If we've already checked this email and it's the same, reuse the response
         if (
           lastCheckedEmail &&
           lastCheckedEmail === data.email &&
@@ -79,7 +135,6 @@ export default function LoginForm() {
             return;
           }
 
-          // Save email and metadata for next step
           setEmailValue(data.email);
           setAllowLoginMeta(resp || null);
           setStep("password");
@@ -87,7 +142,6 @@ export default function LoginForm() {
           setIsLoading(false);
           return;
         } catch (err: any) {
-          // apiService throws parsed backend error objects
           const msg = getBackendErrorMessage(err);
           toast.error("Email verification failed", { description: msg });
           setIsLoading(false);
@@ -95,38 +149,19 @@ export default function LoginForm() {
         }
       }
 
-      // Password step: perform actual login
       const response = await apiService.postWithoutToken("/auth/login/", {
         email: emailValue || data.email,
         password: data.password,
       });
 
       if (response && response.access) {
-        // Pass metadata if available (roles/stores)
-        await handleLogin(
-          response.user,
-          response.access,
-          allowLoginMeta ?? response.user?.roles ?? null,
-        );
-        toast.success("Login successful!", {
-          description: "Welcome back!",
-        });
-
-        const hasTenants = response.available_tenants && response.available_tenants.length > 0;
-
-        // Small delay to show the toast before redirect
-        setTimeout(() => {
-          if (!hasTenants && response.user?.role !== "platform_admin") {
-            window.location.href = "/onboarding";
-          } else {
-            window.location.href = "/dashboard";
-          }
-        }, 1000);
+        await handleSuccessLogin(response);
       } else {
         toast.error("Login failed", {
           description:
             response?.detail || "Please check your credentials and try again.",
         });
+        setIsLoading(false);
       }
     } catch (error: any) {
       console.log("Login error:", error);
@@ -134,12 +169,63 @@ export default function LoginForm() {
       toast.error("Login failed", {
         description: errorMessage,
       });
-    } finally {
       setIsLoading(false);
-      // Only reset form when going back to email step — keep email shown on success/failure
+    } finally {
       if (step === "email") reset();
     }
   };
+
+  if (step === "store-select") {
+    return (
+      <div className="w-full max-w-md p-8 rounded-lg shadow-lg border border-border bg-card animate-in fade-in zoom-in duration-300">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-4">
+            <Store className="h-6 w-6" />
+          </div>
+          <h1 className="text-2xl font-bold mb-2">Select Your Business</h1>
+          <p className="text-muted-foreground text-sm">
+            Choose the store branch/catalog you want to access today
+          </p>
+        </div>
+
+        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+          {availableTenants.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => handleSelectStore(t.id)}
+              disabled={selectingTenant !== null}
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-border/60 hover:border-primary/50 hover:bg-primary/5 text-left cursor-pointer transition-all duration-200 group"
+            >
+              <div className="min-w-0 flex-1 pr-3">
+                <div className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate">
+                  {t.name}
+                </div>
+                <div className="text-xs text-muted-foreground capitalize mt-0.5 font-medium">
+                  {t.business_type} branch
+                </div>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 bg-muted dark:bg-muted/30 rounded-md capitalize font-bold text-muted-foreground shrink-0 border border-border/30">
+                {t.role}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-border/40 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setStep("email");
+              setAvailableTenants([]);
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground font-semibold underline underline-offset-4 cursor-pointer"
+          >
+            Back to login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md p-8 rounded-lg shadow-lg border border-border bg-card">
@@ -254,7 +340,12 @@ export default function LoginForm() {
       </div>
 
       <div className="space-y-4">
-        <GoogleSignInButton isLoading={isLoading} setIsLoading={setIsLoading} text="Sign in with Google" />
+        <GoogleSignInButton
+          isLoading={isLoading}
+          setIsLoading={setIsLoading}
+          text="Sign in with Google"
+          onSuccess={handleSuccessLogin}
+        />
 
         <div className="text-center text-sm text-muted-foreground mt-4">
           Don't have an account?{" "}

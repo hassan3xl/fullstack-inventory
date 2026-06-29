@@ -9,26 +9,29 @@ import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 export default function Loader() {
   const pathname = usePathname() || "";
 
-  if (pathname.includes("/dashboard") || pathname.includes("subscription")) {
-    return <DashboardSkeleton />;
-  }
+  const getPageSkeleton = () => {
+    if (pathname.includes("/dashboard") || pathname.includes("subscription")) {
+      return <DashboardSkeleton />;
+    }
+    if (pathname.includes("/finance")) {
+      return <FinanceSkeleton />;
+    }
+    if (pathname.includes("/pos")) {
+      return <DashboardSkeleton />;
+    }
+    if (pathname.includes("/account") || pathname.includes("/store")) {
+      return <DashboardSkeleton />;
+    }
+    if (
+      pathname.includes("/products") ||
+      pathname.includes("/categories") ||
+      pathname.includes("/customers") ||
+      pathname.includes("/staff")
+    ) {
+      return <TableSkeleton />;
+    }
+    return <PageSkeleton />;
+  };
 
-  if (pathname.includes("/finance")) {
-    return <FinanceSkeleton />;
-  }
-
-  if (pathname.includes("/pos")) {
-    return <DashboardSkeleton />;
-  }
-
-  if (
-    pathname.includes("/products") ||
-    pathname.includes("/categories") ||
-    pathname.includes("/customers") ||
-    pathname.includes("/staff")
-  ) {
-    return <TableSkeleton />;
-  }
-
-  return <PageSkeleton />;
+  return getPageSkeleton();
 }

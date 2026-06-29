@@ -13,11 +13,36 @@ function getClientAccessToken(): string | null {
   }
 }
 
+function getClientActiveTenantId(): string | null {
+  if (typeof window === "undefined") return null;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("active_tenant_id="));
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match.split("=")[1]);
+  } catch {
+    return match.split("=")[1] || null;
+  }
+}
+
 async function getAccessToken(): Promise<string | null> {
   if (typeof window !== "undefined") {
     return getClientAccessToken();
   }
   return getServerAccessToken();
+}
+
+async function getActiveTenantId(): Promise<string | null> {
+  if (typeof window !== "undefined") {
+    return getClientActiveTenantId();
+  }
+  try {
+    const { cookies } = await import("next/headers");
+    return (await cookies()).get("active_tenant_id")?.value || null;
+  } catch {
+    return null;
+  }
 }
 
 // development
@@ -89,14 +114,22 @@ async function fetchWithCatch(
   }
 }
 
+async function buildHeaders(contentType: string | null = "application/json"): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  const tenantId = await getActiveTenantId();
+  const headers: Record<string, string> = {};
+  if (contentType) {
+    headers["Content-Type"] = contentType;
+  }
+  headers["Accept"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (tenantId) headers["X-Tenant"] = tenantId;
+  return headers;
+}
+
 export const apiService = {
   get: async function (url: string, params?: Record<string, any>): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders();
 
     let finalUrl = url;
     if (params) {
@@ -130,12 +163,7 @@ export const apiService = {
   },
 
   post: async function (url: string, data?: any): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders();
 
     const options: RequestInit = {
       method: "POST",
@@ -143,7 +171,6 @@ export const apiService = {
       headers,
     };
 
-    // Only add body if data is provided
     if (data !== undefined) {
       options.body = JSON.stringify(data);
     }
@@ -152,11 +179,7 @@ export const apiService = {
   },
 
   postFormData: async function (url: string, formData: FormData): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders(null);
 
     return fetchWithCatch(url, {
       method: "POST",
@@ -167,11 +190,7 @@ export const apiService = {
   },
 
   patchFormData: async function (url: string, formData: FormData): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders(null);
 
     return fetchWithCatch(url, {
       method: "PATCH",
@@ -182,12 +201,7 @@ export const apiService = {
   },
 
   put: async function (url: string, data: any): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders();
 
     return fetchWithCatch(url, {
       method: "PUT",
@@ -197,12 +211,7 @@ export const apiService = {
     });
   },
   patch: async function (url: string, data: any): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders();
 
     return fetchWithCatch(url, {
       method: "PATCH",
@@ -213,11 +222,7 @@ export const apiService = {
   },
 
   delete: async function (url: string): Promise<any> {
-    const token = await getAccessToken();
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const headers = await buildHeaders(null);
 
     return fetchWithCatch(url, {
       method: "DELETE",

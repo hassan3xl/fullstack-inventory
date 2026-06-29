@@ -20,6 +20,7 @@ import LoginForm from "@/components/auth/LoginForm";
 import SendMessageForm from "@/components/SendMessageForm";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
 
 const features = [
   {

@@ -213,12 +213,15 @@ class SubscriptionPlanListAPIView(generics.ListAPIView):
 class SubscribeTenantAPIView(APIView):
     """Subscribe the current tenant to a plan.
 
-    POST payload: { plan_slug: string }
+    POST payload: { plan_slug: string, payment_provider: string, payment_reference: string }
     """
     permission_classes = [IsAuthenticated, HasTenantAccess]
 
     def post(self, request):
         plan_slug = request.data.get('plan_slug')
+        payment_provider = request.data.get('payment_provider', 'stripe')
+        payment_reference = request.data.get('payment_reference')
+
         if not plan_slug:
             return Response({'detail': 'plan_slug is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -229,8 +232,64 @@ class SubscribeTenantAPIView(APIView):
 
         tenant = request.tenant
 
-        # Basic Stripe stub: in a real implementation, create a Stripe subscription and return id
-        stripe_subscription_id = f"stub_{tenant.id.hex}_{plan.slug}"
+        stripe_subscription_id = None
+        paystack_payment_reference = None
+        paystack_customer_code = None
+        paystack_subscription_code = None
+        status_val = "active"
+
+        # If it is a paid plan, verify the payment
+        if plan.price > 0:
+            if not payment_reference:
+                return Response({'detail': 'payment_reference is required for paid plans'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if payment_provider == 'paystack':
+                import requests
+                from django.conf import settings
+                import logging
+                logger = logging.getLogger(__name__)
+
+                secret_key = getattr(settings, "PAYSTACK_SECRET_KEY", None)
+                verified = False
+
+                # Allow mock validation if key is missing/placeholder and reference is mock
+                if (not secret_key or secret_key.startswith("sk_test_placeholder")) and (payment_reference.startswith("test_") or settings.DEBUG):
+                    verified = True
+                else:
+                    url = f"https://api.paystack.co/transaction/verify/{payment_reference}"
+                    headers = {
+                        "Authorization": f"Bearer {secret_key}",
+                        "Content-Type": "application/json",
+                    }
+                    try:
+                        res = requests.get(url, headers=headers, timeout=10)
+                        if res.status_code == 200:
+                            res_data = res.json()
+                            if res_data.get("status") and res_data.get("data", {}).get("status") == "success":
+                                # Verify amount paid (Paystack is in kobo, price in settings is in Naira)
+                                actual_amount = res_data["data"]["amount"] / 100
+                                if actual_amount >= plan.price:
+                                    verified = True
+                                    paystack_payment_reference = payment_reference
+                                    paystack_customer_code = res_data["data"].get("customer", {}).get("customer_code")
+                                    paystack_subscription_code = res_data["data"].get("metadata", {}).get("subscription_code")
+                                else:
+                                    logger.warning(f"Paystack amount mismatch: expected >= {plan.price}, got {actual_amount}")
+                        else:
+                            logger.warning(f"Paystack verification status code: {res.status_code}")
+                    except Exception as e:
+                        logger.error(f"Error during Paystack verification: {e}")
+
+                if not verified:
+                    return Response({'detail': 'Payment verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                status_val = "active"
+            else:
+                # Stub other providers (like Stripe)
+                stripe_subscription_id = payment_reference
+        else:
+            # Free plan
+            stripe_subscription_id = f"free_{tenant.id.hex}"
 
         # Deactivate existing subscriptions and create a new record
         with transaction.atomic():
@@ -240,10 +299,16 @@ class SubscribeTenantAPIView(APIView):
                 plan=plan,
                 active=True,
                 stripe_subscription_id=stripe_subscription_id,
+                paystack_payment_reference=paystack_payment_reference,
+                paystack_customer_code=paystack_customer_code,
+                paystack_subscription_code=paystack_subscription_code,
+                payment_provider=payment_provider,
+                payment_status=status_val,
             )
 
         serializer = TenantSubscriptionSerializer(sub)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 
 class VerifyStoreAPIView(APIView):
@@ -348,3 +413,92 @@ class UnlinkPremiumStoreAPIView(APIView):
                 )
 
         return Response({'message': f'Successfully unlinked {target_store.name} from your plan.'})
+
+
+class CreateBranchAPIView(APIView):
+    """
+    Allows a tenant owner/admin to create a branch.
+    If the parent tenant has an Enterprise plan, the branch can inherit/share the plan.
+    """
+    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def post(self, request):
+        name = request.data.get('name')
+        business_type = request.data.get('business_type', Tenant.BusinessType.GENERAL)
+
+        if not name:
+            return Response({'detail': 'Branch name is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        parent_tenant = request.tenant
+        current_plan = parent_tenant.current_plan
+
+        with transaction.atomic():
+            branch = Tenant.objects.create(
+                name=name,
+                business_type=business_type
+            )
+
+            # Share enterprise plan if active and limit not exceeded
+            if current_plan and current_plan.slug == 'enterprise':
+                if parent_tenant.linked_premium_stores.count() < 2:  # Limit check (up to 2 linked stores)
+                    branch.parent_enterprise_tenant = parent_tenant
+                    branch.save()
+                else:
+                    # Assign default plan if enterprise limit reached
+                    default_plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+                    if default_plan:
+                        TenantSubscription.plain_objects.create(
+                            tenant=branch,
+                            plan=default_plan,
+                            active=True,
+                        )
+            else:
+                # Assign default plan if not enterprise
+                default_plan = SubscriptionPlan.objects.filter(is_default=True, is_active=True).first()
+                if default_plan:
+                    TenantSubscription.plain_objects.create(
+                        tenant=branch,
+                        plan=default_plan,
+                        active=True,
+                    )
+
+            # Link the creator user as the OWNER of the branch
+            TenantUser.objects.create(
+                tenant=branch,
+                user=request.user,
+                role=TenantUser.Role.OWNER
+            )
+
+        return Response({
+            'message': f'Branch "{branch.name}" created successfully.',
+            'branch': {
+                'id': str(branch.id),
+                'name': branch.name,
+                'store_id': branch.store_id,
+                'is_linked_to_enterprise': branch.parent_enterprise_tenant is not None
+            }
+        }, status=status.HTTP_201_CREATED)
+
+
+class ListBranchesAPIView(APIView):
+    """
+    Lists all branches created by or linked to the current tenant.
+    """
+    permission_classes = [IsAuthenticated, HasTenantAccess]
+
+    def get(self, request):
+        tenant = request.tenant
+        branches = Tenant.objects.filter(parent_enterprise_tenant=tenant)
+        return Response({
+            'branches': [
+                {
+                    'id': str(b.id),
+                    'name': b.name,
+                    'store_id': b.store_id,
+                    'business_type': b.business_type,
+                    'is_active': b.is_active,
+                    'created_at': b.created_at
+                }
+                for b in branches
+            ]
+        })

@@ -28,6 +28,11 @@ def add_tenant_context_to_response(response, user, request):
     # Get user's tenants
     user_tenants = TenantUser.objects.filter(user=user).select_related('tenant')
 
+    # Staff must belong to at least one tenant to log in
+    if not user_tenants.exists() and user.role == User.RoleChoices.STAFF:
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied("This account is not associated with any store. Please contact your store administrator.")
+
     # Verify membership if tenant context was provided
     if tenant:
         has_access = user_tenants.filter(tenant=tenant).exists()
@@ -64,6 +69,7 @@ def add_tenant_context_to_response(response, user, request):
     
     return response
 
+
 class TenantLoginView(LoginView):
     """
     Enhanced login view that:
@@ -82,7 +88,17 @@ class TenantLoginView(LoginView):
                         {"non_field_errors": ["Your account is currently inactive. Please check with your administrator or verify if registration approval is pending."]},
                         status=status.HTTP_400_BAD_REQUEST
                     )
+
+                # Ensure allauth EmailAddress record exists so email-based authentication succeeds
+                from allauth.account.models import EmailAddress
+                EmailAddress.objects.get_or_create(
+                    user=user,
+                    email=user.email,
+                    defaults={'verified': True, 'primary': True}
+                )
             except User.DoesNotExist:
+                pass
+            except Exception:
                 pass
 
         response = super().post(request, *args, **kwargs)

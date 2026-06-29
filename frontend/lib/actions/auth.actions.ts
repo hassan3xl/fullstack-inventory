@@ -62,4 +62,14 @@ export async function resetAuthCookies() {
   cookieStore.set("session_user", "", { maxAge: 0, path: "/" });
   cookieStore.set("session_access_token", "", { maxAge: 0, path: "/" });
   cookieStore.set("session_roles", "", { maxAge: 0, path: "/" });
+  cookieStore.set("active_tenant_id", "", { maxAge: 0, path: "/" });
+}
+
+export async function setActiveTenantCookie(tenantId: string) {
+  const cookieStore = await cookies();
+  cookieStore.set("active_tenant_id", tenantId, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    sameSite: "lax",
+  });
 }

@@ -65,10 +65,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     permissions = serializers.SerializerMethodField()
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
+    available_tenants = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'role', 'is_active', 'first_name', 'last_name', 'permissions')
+        fields = ('id', 'email', 'role', 'is_active', 'first_name', 'last_name', 'permissions', 'available_tenants')
         read_only_fields = ('email', 'role')
 
     def get_first_name(self, user):
@@ -76,6 +77,19 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     def get_last_name(self, user):
         return user.profile.last_name if hasattr(user, 'profile') else ""
+
+    def get_available_tenants(self, user):
+        from apps.tenants.models import TenantUser
+        user_tenants = TenantUser.objects.filter(user=user).select_related('tenant')
+        return [
+            {
+                'id': str(tu.tenant.id),
+                'name': tu.tenant.name,
+                'role': tu.role,
+                'role_display': tu.get_role_display(),
+            }
+            for tu in user_tenants
+        ]
 
 
     def get_permissions(self, user):

@@ -76,7 +76,16 @@ export const useSubscribeToPlan = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (planSlug: string) => StoreApi.subscribeToPlan(planSlug),
+    mutationFn: async ({
+      planSlug,
+      paymentProvider,
+      paymentReference,
+    }: {
+      planSlug: string;
+      paymentProvider?: string;
+      paymentReference?: string;
+    }) =>
+      StoreApi.subscribeToPlan({ planSlug, paymentProvider, paymentReference }),
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store"] });

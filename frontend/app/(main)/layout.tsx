@@ -38,14 +38,19 @@ export default function RootLayout({
     !user.permissions?.store_role && 
     (!(user as any).available_tenants || (user as any).available_tenants.length === 0);
 
-  if (
-    loading ||
-    !user ||
-    user.role === "platform_admin" ||
-    user.permissions?.platform_role === "platform_admin" ||
-    hasNoTenant
-  ) {
-    return <Loader />;
+  const isPlatformAdmin = user?.role === "platform_admin" || user?.permissions?.platform_role === "platform_admin";
+
+  // Render the layout frame if we are still loading, OR if we have an authenticated tenant user
+  const showLayout = loading || (user && !isPlatformAdmin && !hasNoTenant);
+
+  if (!showLayout) {
+    return (
+      <div className="h-screen w-screen overflow-y-auto bg-gray-50 text-foreground p-6 sm:p-8">
+        <div className="max-w-7xl mx-auto">
+          <Loader />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -57,7 +62,7 @@ export default function RootLayout({
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mt-4 mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            {children}
+            {loading ? <Loader /> : children}
           </div>
         </main>
       </div>
