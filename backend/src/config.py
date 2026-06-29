@@ -24,6 +24,10 @@ DOCKER_DB = os.getenv("DOCKER_DB")
 PRODUCTION_DB = os.getenv("PRODUCTION_DB")
 DEVELOPMENT_DB = os.getenv("DEVELOPMENT_DB")
 
+# Google OAuth
+GOOGLE_OAUTH_CLIENT_ID=os.getenv("GOOGLE_OAUTH_CLIENT_ID")
+GOOGLE_OAUTH_CLIENT_SECRET=os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
+
 # 5. Core Application Settings
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")

@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { apiService, getBackendErrorMessage } from "@/lib/services/apiService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { handleLogin } from "@/lib/actions/auth.actions";
+import GoogleSignInButton from "./GoogleSignInButton";
 
 type FormValues = {
   email: string;
@@ -39,14 +41,21 @@ export default function RegisterForm() {
       });
 
       if (res.access) {
+        // Automatically login the user
+        await handleLogin(
+          res.user,
+          res.access,
+          res.user?.roles || null
+        );
+
         toast.success("Account created successfully!", {
-          description: "Please sign in.",
+          description: "Setting up your onboarding...",
         });
 
-        // Redirect to login page after successful signup
+        // Redirect to onboarding page after successful signup
         setTimeout(() => {
-          router.push("/login");
-        }, 2000);
+          window.location.href = "/onboarding";
+        }, 1500);
       } else {
         toast.error("Sign up failed", {
           description:
@@ -166,6 +175,11 @@ export default function RegisterForm() {
         <div className="flex-1 border-t border-border" />
         <span className="px-3 text-sm text-muted-foreground">or</span>
         <div className="flex-1 border-t border-border" />
+      </div>
+
+      {/* Google Sign Up Button */}
+      <div className="mb-6">
+        <GoogleSignInButton isLoading={isLoading} setIsLoading={setIsLoading} text="Sign up with Google" />
       </div>
 
       {/* Sign In Link */}

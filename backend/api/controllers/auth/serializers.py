@@ -29,11 +29,10 @@ class CustomRegisterSerializer(RegisterSerializer):
     def save(self, request):
         with transaction.atomic():
             user = super().save(request)
-            Profile.objects.create(
-                user=user,
-                first_name=self.validated_data.get('first_name', ''),
-                last_name=self.validated_data.get('last_name', '')
-            )
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profile.first_name = self.validated_data.get('first_name', '')
+            profile.last_name = self.validated_data.get('last_name', '')
+            profile.save()
             return user
 
 

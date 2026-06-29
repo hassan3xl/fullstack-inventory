@@ -120,14 +120,14 @@ export default function MarketingPage() {
                   Start for free <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </Button>
-              <Button
+              {/* <Button
                 asChild
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto font-black text-xs uppercase tracking-wider py-6 px-8 rounded-2xl cursor-pointer"
               >
                 <Link href="/pricing">View Plans & Pricing</Link>
-              </Button>
+              </Button> */}
             </>
           )}
         </div>
