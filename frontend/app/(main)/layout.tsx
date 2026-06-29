@@ -22,15 +22,28 @@ export default function RootLayout({
         user.role === "platform_admin" ||
         user.permissions?.platform_role === "platform_admin"
       ) {
+        // Platform admin has separate panel
+      } else if (
+        !user.permissions?.store_role &&
+        (!(user as any).available_tenants || (user as any).available_tenants.length === 0)
+      ) {
+        window.location.href = "/onboarding";
       }
     }
   }, [user, loading]);
+
+  const hasNoTenant = user && 
+    user.role !== "platform_admin" && 
+    user.permissions?.platform_role !== "platform_admin" && 
+    !user.permissions?.store_role && 
+    (!(user as any).available_tenants || (user as any).available_tenants.length === 0);
 
   if (
     loading ||
     !user ||
     user.role === "platform_admin" ||
-    user.permissions?.platform_role === "platform_admin"
+    user.permissions?.platform_role === "platform_admin" ||
+    hasNoTenant
   ) {
     return <Loader />;
   }

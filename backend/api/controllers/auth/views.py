@@ -22,6 +22,48 @@ from apps.tenants.models import TenantUser
 
 User = get_user_model()
 
+def add_tenant_context_to_response(response, user, request):
+    tenant = getattr(request, 'tenant', None)
+
+    # Get user's tenants
+    user_tenants = TenantUser.objects.filter(user=user).select_related('tenant')
+
+    # Verify membership if tenant context was provided
+    if tenant:
+        has_access = user_tenants.filter(tenant=tenant).exists()
+        if not has_access:
+            return Response(
+                {"detail": f"Account '{user.email}' is not registered with this business."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        response.data['tenant_id'] = str(tenant.id)
+        response.data['tenant_name'] = tenant.name
+    elif user_tenants.exists():
+        primary_tenant = user_tenants.first().tenant
+        response.data['tenant_id'] = str(primary_tenant.id)
+        response.data['tenant_name'] = primary_tenant.name
+    else:
+        response.data['tenant_id'] = None
+        response.data['tenant_name'] = None
+
+    response.data['available_tenants'] = [
+        {
+            'id': str(tu.tenant.id),
+            'name': tu.tenant.name,
+            'role': tu.role,
+            'role_display': tu.get_role_display(),
+        }
+        for tu in user_tenants
+    ]
+
+    # Full permissions block — use these flags directly in the UI
+    from .serializers import UserDetailSerializer
+    response.data['permissions'] = UserDetailSerializer(
+        user, context={'request': request}
+    ).data.get('permissions', {})
+    
+    return response
+
 class TenantLoginView(LoginView):
     """
     Enhanced login view that:
@@ -46,45 +88,7 @@ class TenantLoginView(LoginView):
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
-            user = self.user
-            tenant = getattr(request, 'tenant', None)
-
-            # Get user's tenants
-            user_tenants = TenantUser.objects.filter(user=user).select_related('tenant')
-
-            # Verify membership if tenant context was provided
-            if tenant:
-                has_access = user_tenants.filter(tenant=tenant).exists()
-                if not has_access:
-                    return Response(
-                        {"detail": f"Account '{user.email}' is not registered with this business."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-                response.data['tenant_id'] = str(tenant.id)
-                response.data['tenant_name'] = tenant.name
-            elif user_tenants.exists():
-                primary_tenant = user_tenants.first().tenant
-                response.data['tenant_id'] = str(primary_tenant.id)
-                response.data['tenant_name'] = primary_tenant.name
-            else:
-                response.data['tenant_id'] = None
-                response.data['tenant_name'] = None
-
-            response.data['available_tenants'] = [
-                {
-                    'id': str(tu.tenant.id),
-                    'name': tu.tenant.name,
-                    'role': tu.role,
-                    'role_display': tu.get_role_display(),
-                }
-                for tu in user_tenants
-            ]
-
-            # Full permissions block — use these flags directly in the UI
-            from .serializers import UserDetailSerializer
-            response.data['permissions'] = UserDetailSerializer(
-                user, context={'request': request}
-            ).data.get('permissions', {})
+            response = add_tenant_context_to_response(response, self.user, request)
 
         return response
 
@@ -93,6 +97,17 @@ class GoogleLogin(SocialLoginView):
     # callback_url must match EXACTLY what you put in Google Cloud Console
     callback_url = "http://localhost:3000" 
     client_class = OAuth2Client
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            user = self.user
+            # Automatically ensure user is active if registered via Google
+            if not user.is_active:
+                user.is_active = True
+                user.save()
+            response = add_tenant_context_to_response(response, user, request)
+        return response
 
     
 class RequestOTPView(APIView):
@@ -184,9 +199,10 @@ class CheckUserView(APIView):
                 'role_display': tu.get_role_display(),
             })
 
-        allowed = user_tenants.exists()
+        # Platform admins and tenants are allowed to log in without a tenant membership (e.g. for onboarding)
+        allowed = user_tenants.exists() or user.role in [User.RoleChoices.TENANT, User.RoleChoices.PLATFORM_ADMIN]
 
-        # If user exists but has no tenant membership, disallow login for tenant-protected flows
+        # If user exists but has no tenant membership and is not admin/tenant, disallow login
         if not allowed:
             return Response({
                 'allowed': False,

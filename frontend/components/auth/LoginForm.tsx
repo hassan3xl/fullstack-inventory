@@ -9,6 +9,7 @@ import { handleLogin } from "@/lib/actions/auth.actions";
 import { apiService, getBackendErrorMessage } from "@/lib/services/apiService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import GoogleSignInButton from "./GoogleSignInButton";
 
 type FormValues = {
   email: string;
@@ -111,9 +112,15 @@ export default function LoginForm() {
           description: "Welcome back!",
         });
 
+        const hasTenants = response.available_tenants && response.available_tenants.length > 0;
+
         // Small delay to show the toast before redirect
         setTimeout(() => {
-          window.location.href = "/dashboard";
+          if (!hasTenants && response.user?.role !== "platform_admin") {
+            window.location.href = "/onboarding";
+          } else {
+            window.location.href = "/dashboard";
+          }
         }, 1000);
       } else {
         toast.error("Login failed", {
@@ -238,6 +245,24 @@ export default function LoginForm() {
           )}
         </Button>
       </form>
+
+      {/* Divider */}
+      <div className="my-6 flex items-center">
+        <div className="flex-1 border-t border-border" />
+        <span className="px-3 text-sm text-muted-foreground">or</span>
+        <div className="flex-1 border-t border-border" />
+      </div>
+
+      <div className="space-y-4">
+        <GoogleSignInButton isLoading={isLoading} setIsLoading={setIsLoading} text="Sign in with Google" />
+
+        <div className="text-center text-sm text-muted-foreground mt-4">
+          Don't have an account?{" "}
+          <Link href="/register" className="text-primary font-medium hover:underline">
+            Create an account
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
