@@ -26,20 +26,20 @@ import { User, Lock, Eye, CheckCircle2, Moon, Loader2 } from "lucide-react";
 type ActiveTab = "profile" | "security" | "appearance";
 
 const AccountPage = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isOwner } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>("profile");
 
   // Profile hook
   const { data: profile, isLoading: isProfileLoading } = useGetProfile();
   const updateProfileMutation = useUpdateProfile();
 
+  const canEditNames = isAdmin || isOwner;
   // Profile Form State
   const [profileData, setProfileData] = useState({
     first_name: "",
     last_name: "",
     phone: "",
     bio: "",
-    email_notifications: false,
   });
 
   useEffect(() => {
@@ -49,7 +49,6 @@ const AccountPage = () => {
         last_name: profile.last_name || "",
         phone: profile.phone || "",
         bio: profile.bio || "",
-        email_notifications: profile.email_notifications || false,
       });
     }
   }, [profile]);
@@ -68,11 +67,6 @@ const AccountPage = () => {
   ) => {
     const { name, value } = e.target;
     setProfileData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setProfileData((prev) => ({ ...prev, [name]: checked }));
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,9 +205,12 @@ const AccountPage = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleProfileSubmit} className="space-y-6">
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium">
-                      First name and Last name can only be modified by a store administrator or owner.
-                    </div>
+                    {!canEditNames && (
+                      <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium">
+                        First name and Last name can only be modified by a store
+                        administrator
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -225,7 +222,7 @@ const AccountPage = () => {
                           value={profileData.first_name}
                           onChange={handleProfileChange}
                           placeholder="First Name"
-                          disabled={true}
+                          disabled={!canEditNames}
                           className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
                         />
                       </div>
@@ -238,7 +235,7 @@ const AccountPage = () => {
                           value={profileData.last_name}
                           onChange={handleProfileChange}
                           placeholder="Last Name"
-                          disabled={true}
+                          disabled={!canEditNames}
                           className="rounded-xl bg-muted/65 cursor-not-allowed opacity-80"
                         />
                       </div>
@@ -247,7 +244,7 @@ const AccountPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                          Email Address (Read-only)
+                          Email
                         </label>
                         <NormalInput
                           value={user?.email || ""}
@@ -257,12 +254,14 @@ const AccountPage = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                          Access Role (Read-only)
+                          Access
                         </label>
                         <NormalInput
                           value={
                             user?.permissions?.store_role
-                              ? user.permissions.store_role.charAt(0).toUpperCase() +
+                              ? user.permissions.store_role
+                                  .charAt(0)
+                                  .toUpperCase() +
                                 user.permissions.store_role.slice(1)
                               : "No Role"
                           }
@@ -297,23 +296,6 @@ const AccountPage = () => {
                         rows={4}
                         className="rounded-xl resize-none"
                       />
-                    </div>
-
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-muted/30 border border-border/50">
-                      <input
-                        type="checkbox"
-                        id="email_notifications"
-                        name="email_notifications"
-                        checked={profileData.email_notifications}
-                        onChange={handleCheckboxChange}
-                        className="w-4 h-4 rounded border-border/80 text-primary focus:ring-primary/20 accent-primary"
-                      />
-                      <label
-                        htmlFor="email_notifications"
-                        className="text-sm font-bold cursor-pointer"
-                      >
-                        Receive system update & inventory notifications
-                      </label>
                     </div>
 
                     <Button

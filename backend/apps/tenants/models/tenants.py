@@ -28,6 +28,7 @@ class Tenant(models.Model):
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
 
+    subdomain = models.CharField(max_length=64, unique=True, blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
@@ -67,6 +68,12 @@ class Tenant(models.Model):
                 if not Tenant.objects.filter(store_id=new_id).exists():
                     self.store_id = new_id
                     break
+        
+        if self.subdomain:
+            self.subdomain = self.subdomain.lower().strip()
+        else:
+            self.subdomain = None
+
         super().save(*args, **kwargs)
 
     def __str__(self):

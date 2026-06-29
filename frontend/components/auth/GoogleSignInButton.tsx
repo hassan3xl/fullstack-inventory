@@ -10,6 +10,7 @@ interface GoogleSignInButtonProps {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   text?: string;
+  onSuccess?: (response: any) => void;
 }
 
 declare global {
@@ -22,6 +23,7 @@ export default function GoogleSignInButton({
   isLoading,
   setIsLoading,
   text = "Continue with Google",
+  onSuccess,
 }: GoogleSignInButtonProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
@@ -65,6 +67,11 @@ export default function GoogleSignInButton({
               });
 
               if (response && response.access) {
+                if (onSuccess) {
+                  onSuccess(response);
+                  return;
+                }
+
                 await handleLogin(
                   response.user,
                   response.access,

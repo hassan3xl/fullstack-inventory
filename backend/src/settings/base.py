@@ -254,4 +254,7 @@ FRONTEND_URL = "http://inventory.qstack.com.ng"
 FRONTEND_DOMAIN = "inventory.qstack.com.ng"
 FRONTEND_PROTOCOL = "http"
 
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_placeholder')
+
+
 

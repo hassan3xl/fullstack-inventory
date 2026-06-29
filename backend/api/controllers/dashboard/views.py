@@ -25,6 +25,7 @@ class BusinessProfileAPIView(APIView):
                 "max_staff": sub.plan.max_staff,
                 "has_customers": sub.plan.has_customers,
                 "has_analytics": sub.plan.has_analytics,
+                "has_subdomain": sub.plan.has_subdomain,
                 "features": sub.plan.features,
                 "ends_at": sub.ends_at,
                 "started_at": sub.started_at,
@@ -42,6 +43,7 @@ class BusinessProfileAPIView(APIView):
                     "max_staff": default_plan.max_staff,
                     "has_customers": default_plan.has_customers,
                     "has_analytics": default_plan.has_analytics,
+                    "has_subdomain": default_plan.has_subdomain,
                     "features": default_plan.features,
                     "ends_at": None,
                     "started_at": tenant.created_at,
@@ -66,6 +68,7 @@ class BusinessProfileAPIView(APIView):
             "current_plan": current_plan,
             "total_products": total_products,
             "total_staff": total_staff,
+            "subdomain": tenant.subdomain,
             "parent_enterprise_tenant": {
                 "id": tenant.parent_enterprise_tenant.id,
                 "name": tenant.parent_enterprise_tenant.name,
@@ -208,6 +211,17 @@ class StaffAddAPIView(APIView):
         from apps.users.models import Profile
         User = get_user_model()
 
+        # Check if user already exists in this store
+        try:
+            existing_user = User.objects.get(email__iexact=email)
+            if TenantUser.objects.filter(user=existing_user, tenant=tenant).exists():
+                return Response(
+                    {"detail": "This email address is already associated with this store."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except User.DoesNotExist:
+            pass
+
         try:
             with transaction.atomic():
                 # 1. Create or get User — provisioned staff get platform role = STAFF
@@ -224,6 +238,9 @@ class StaffAddAPIView(APIView):
                     user.save()
                 else:
                     password = None
+                    if user.role != User.RoleChoices.STAFF:
+                        user.role = User.RoleChoices.STAFF
+                        user.save()
 
                 # 2. Create or Update Profile
                 Profile.objects.update_or_create(
@@ -241,26 +258,34 @@ class StaffAddAPIView(APIView):
                 # 4. Link to Tenant with the requested in-store role
                 TenantUser.objects.create(user=user, tenant=tenant, role=store_role)
 
-                # 5. Send email with login details if new user
-                if created and password:
-                    try:
-                        user_display_name = f"{first_name} {last_name}".strip() or email.split('@')[0]
-                        
-                        EmailSender.send_notification(
-                            to=email,
-                            name=user_display_name,
-                            title=f"Welcome to {tenant.name}",
-                            message=f"You have been added to {tenant.name} as a {store_role}.<br><br>"
-                                    f"<strong>Login Details:</strong><br>"
-                                    f"Email: {email}<br>"
-                                    f"Temporary Password: <code>{password}</code><br><br>"
-                                    f"Please log in and change your password immediately for security.",
-                            cta_text="Login Now",
-                            cta_link="https://inventory.qstack.com.ng/login"  # Update with your frontend URL
+                # 5. Send welcome or notification email
+                try:
+                    user_display_name = f"{first_name} {last_name}".strip() or email.split('@')[0]
+                    if created and password:
+                        message = (
+                            f"You have been added to {tenant.name} as a {store_role}.<br><br>"
+                            f"<strong>Login Details:</strong><br>"
+                            f"Email: {email}<br>"
+                            f"Temporary Password: <code>{password}</code><br><br>"
+                            f"Please log in and change your password immediately for security."
                         )
-                    except Exception as email_error:
-                        print(f"Warning: Failed to send email to {email}: {str(email_error)}")
-                        # Continue even if email fails
+                    else:
+                        message = (
+                            f"You have been added to {tenant.name} as a {store_role}.<br><br>"
+                            f"Since you already have a Quantum Stack account, you can log in immediately using your existing credentials."
+                        )
+                    
+                    EmailSender.send_notification(
+                        to=email,
+                        name=user_display_name,
+                        title=f"Welcome to {tenant.name}",
+                        message=message,
+                        cta_text="Login Now",
+                        cta_link="https://inventory.qstack.com.ng/login"  # Update with your frontend URL
+                    )
+                except Exception as email_error:
+                    print(f"Warning: Failed to send email to {email}: {str(email_error)}")
+                    # Continue even if email fails
 
                 return Response({
                     "message": "Staff member added successfully",

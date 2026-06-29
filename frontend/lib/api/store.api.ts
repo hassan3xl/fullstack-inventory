@@ -74,9 +74,21 @@ export const StoreApi = {
     }
   },
 
-  subscribeToPlan: async (planSlug: string) => {
+  subscribeToPlan: async ({
+    planSlug,
+    paymentProvider,
+    paymentReference,
+  }: {
+    planSlug: string;
+    paymentProvider?: string;
+    paymentReference?: string;
+  }) => {
     try {
-      const res = await apiService.post("/tenants/subscribe/", { plan_slug: planSlug });
+      const res = await apiService.post("/tenants/subscribe/", {
+        plan_slug: planSlug,
+        payment_provider: paymentProvider,
+        payment_reference: paymentReference,
+      });
       return res;
     } catch (error) {
       console.error("Error subscribing to plan:", error);

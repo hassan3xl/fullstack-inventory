@@ -7,9 +7,23 @@ import { Plus, User, Shield, Calendar, Lock } from "lucide-react";
 import { apiService } from "@/lib/services/apiService";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/hooks/queryKeys";
-import StaffForm from "@/components/forms/StaffForm";
 import { useGetStore } from "@/lib/hooks/store.hook";
 import { toast } from "sonner";
+import StaffForm from "@/components/forms/StaffForm";
+const getRoleBadgeStyle = (role: string) => {
+  switch (role?.toLowerCase()) {
+    case "owner":
+      return "bg-amber-500/10 text-amber-500 border border-amber-500/20";
+    case "admin":
+      return "bg-blue-500/10 text-blue-500 border border-blue-500/20";
+    case "manager":
+      return "bg-purple-500/10 text-purple-500 border border-purple-500/20";
+    case "cashier":
+      return "bg-green-500/10 text-green-500 border border-green-500/20";
+    default:
+      return "bg-muted text-muted-foreground border border-border/30";
+  }
+};
 
 export default function StaffClient() {
   const { data: store } = useGetStore();
@@ -136,17 +150,7 @@ export default function StaffClient() {
 
                 <div className="flex items-center justify-between pt-3 border-t border-border/50">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                      member.role === "owner"
-                        ? "bg-primary/50 text-white"
-                        : member.role === "admin"
-                          ? "bg-primary text-white"
-                          : member.role === "manager"
-                            ? "bg-primary/80 text-white"
-                            : member.role === "cashier"
-                              ? "bg-primary/70 text-white"
-                              : "bg-primary/50 text-white"
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold capitalize ${getRoleBadgeStyle(member.role)}`}
                   >
                     <Shield className="w-3 h-3" />
                     {member.role_display}
@@ -214,17 +218,7 @@ export default function StaffClient() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                          member.role === "owner"
-                            ? "bg-accent text-white"
-                            : member.role === "admin"
-                              ? "bg-accent"
-                              : member.role === "manager"
-                                ? "bg-secondary"
-                                : member.role === "cashier"
-                                  ? "bg-primary/50"
-                                  : "bg-muted"
-                        }`}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold capitalize ${getRoleBadgeStyle(member.role)}`}
                       >
                         <Shield className="w-3 h-3" />
                         {member.role_display}

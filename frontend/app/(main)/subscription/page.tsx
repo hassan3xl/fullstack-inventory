@@ -39,7 +39,7 @@ export default function SubscriptionPage() {
   const { data: plans, isLoading: plansLoading } = useGetSubscriptionPlans();
   const subscribeMutation = useSubscribeToPlan();
 
-  const handleSubscribe = async (planSlug: string) => {
+  const handleSubscribe = async (plan: any) => {
     if (!user) {
       toast.info("Authentication Required", {
         description:
@@ -57,15 +57,83 @@ export default function SubscriptionPage() {
       return;
     }
 
+    // Free plan: Subscribe directly
+    if (plan.price === 0) {
+      try {
+        await subscribeMutation.mutateAsync({ planSlug: plan.slug });
+        toast.success("Subscription updated successfully", {
+          description: `Your store is now on the ${plan.name} plan.`,
+        });
+      } catch {
+        toast.error("Subscription failed", {
+          description: "Please try again later.",
+        });
+      }
+      return;
+    }
+
+    // Paid plan: Load Paystack script dynamically
+    const loadPaystack = () => {
+      return new Promise<boolean>((resolve) => {
+        if ((window as any).PaystackPop) {
+          resolve(true);
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://js.paystack.co/v1/inline.js";
+        script.async = true;
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+      });
+    };
+
+    const loadingId = toast.loading("Initializing Paystack payment gateway...");
+    const loaded = await loadPaystack();
+    if (!loaded) {
+      toast.error("Failed to load payment gateway. Please check your internet connection.", { id: loadingId });
+      return;
+    }
+    toast.dismiss(loadingId);
+
     try {
-      await subscribeMutation.mutateAsync(planSlug);
-      toast.success("Subscription updated successfully", {
-        description: `Your store is now on the ${planSlug} plan.`,
+      const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_test_placeholder_key";
+      const handler = (window as any).PaystackPop.setup({
+        key: paystackKey,
+        email: user.email,
+        amount: plan.price * 100, // Paystack requires amount in kobo
+        currency: "NGN",
+        ref: "qstack_" + Math.floor(Math.random() * 1000000000 + 1),
+        callback: async function (response: any) {
+          const verifyId = toast.loading("Verifying payment transaction...", {
+            description: "Please do not close this window."
+          });
+          try {
+            await subscribeMutation.mutateAsync({
+              planSlug: plan.slug,
+              paymentProvider: "paystack",
+              paymentReference: response.reference,
+            });
+            toast.success("Subscription updated successfully!", {
+              id: verifyId,
+              description: `Your store is now on the ${plan.name} plan.`
+            });
+          } catch (err: any) {
+            const errorMsg = err.response?.data?.detail || "Please try again or contact support.";
+            toast.error("Verification failed", {
+              id: verifyId,
+              description: errorMsg,
+            });
+          }
+        },
+        onClose: function () {
+          toast.info("Payment cancelled.");
+        },
       });
-    } catch {
-      toast.error("Subscription failed", {
-        description: "Please try again later.",
-      });
+      handler.openIframe();
+    } catch (err) {
+      toast.error("Failed to initialize payment process.");
+      console.error(err);
     }
   };
 
@@ -91,6 +159,18 @@ export default function SubscriptionPage() {
     }
     if (plan.has_analytics) {
       list.push("Real-time Analytics & Finance Reports");
+    }
+    if (plan.has_ai_integration) {
+      list.push("AI Insights & Smart Tags");
+    }
+    if (plan.has_advanced_reporting) {
+      list.push("Advanced Financial & Sales Reports");
+    }
+    if (plan.has_priority_support) {
+      list.push("24/7 Priority Support");
+    }
+    if (plan.has_subdomain) {
+      list.push("Custom Business Subdomain");
     }
 
     if (list.length === 0) {
@@ -300,7 +380,7 @@ export default function SubscriptionPage() {
                               subscribeMutation.isPending
                             }
                             className="w-full font-bold text-xs cursor-pointer"
-                            onClick={() => handleSubscribe(plan.slug)}
+                            onClick={() => handleSubscribe(plan)}
                           >
                             {subscribeMutation.isPending && !isCurrent
                               ? "Processing..."
@@ -428,6 +508,48 @@ export default function SubscriptionPage() {
                                 }
                               >
                                 Advanced Financial Reports & Analytics
+                              </span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${plan.has_ai_integration ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                              />
+                              <span
+                                className={
+                                  plan.has_ai_integration
+                                    ? "text-foreground"
+                                    : "line-through opacity-60"
+                                }
+                              >
+                                AI Smart Insights & Predictions
+                              </span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${plan.has_priority_support ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                              />
+                              <span
+                                className={
+                                  plan.has_priority_support
+                                    ? "text-foreground"
+                                    : "line-through opacity-60"
+                                }
+                              >
+                                24/7 Priority Support
+                              </span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${plan.has_subdomain ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                              />
+                              <span
+                                className={
+                                  plan.has_subdomain
+                                    ? "text-foreground"
+                                    : "line-through opacity-60"
+                                }
+                              >
+                                Custom Business Subdomain
                               </span>
                             </li>
                           </ul>

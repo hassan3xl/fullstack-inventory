@@ -49,5 +49,5 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "backend.src.settings"
+DJANGO_SETTINGS_MODULE = "src.settings.testing"
 python_files = ["tests/*.py"]

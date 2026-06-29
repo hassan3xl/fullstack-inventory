@@ -32,6 +32,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import Loader from "@/components/Loader";
+import { getBackendErrorMessage } from "@/lib/services/apiService";
+import Link from "next/link";
 
 // ── Capability pill ──────────────────────────────────────────────────────
 const CapabilityPill = ({
@@ -133,10 +135,14 @@ export default function SettingsPage() {
   const [nameValue, setNameValue] = useState("");
   const [showNameWarning, setShowNameWarning] = useState(false);
 
-  // Sync name field when store data loads
+  const [isEditingSubdomain, setIsEditingSubdomain] = useState(false);
+  const [subdomainValue, setSubdomainValue] = useState("");
+
+  // Sync fields when store data loads
   useEffect(() => {
     if (store?.name) setNameValue(store.name);
-  }, [store?.name]);
+    if (store?.subdomain) setSubdomainValue(store.subdomain);
+  }, [store?.name, store?.subdomain]);
 
   // Auto-focus input when editing starts
   useEffect(() => {
@@ -202,6 +208,26 @@ export default function SettingsPage() {
     setNameValue(store?.name || "");
     setIsEditingName(false);
     setShowNameWarning(false);
+  };
+
+  const handleSubdomainSave = async () => {
+    const trimmed = subdomainValue.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (trimmed === (store?.subdomain || "")) {
+      setIsEditingSubdomain(false);
+      return;
+    }
+    try {
+      await updateStoreMutation.mutateAsync({ subdomain: trimmed || null });
+      toast.success("Subdomain updated successfully", {
+        description: `Your custom store subdomain is now set to ${trimmed || "none"}.`,
+      });
+      setIsEditingSubdomain(false);
+    } catch (err: any) {
+      const msg = getBackendErrorMessage(err);
+      toast.error("Failed to update subdomain", {
+        description: msg,
+      });
+    }
   };
 
   const handleToggleEmailNotifications = async (checked: boolean) => {
@@ -439,6 +465,86 @@ export default function SettingsPage() {
                 label="Store Type"
                 value={config.displayName}
               />
+
+              {/* Custom Business Subdomain Field */}
+              <div className="flex items-start gap-4 py-4 border-b border-border/40 last:border-0">
+                <div className="w-9 h-9 rounded-xl bg-muted/60 flex items-center justify-center shrink-0">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">
+                    Store Subdomain
+                  </p>
+                  {store.current_plan?.has_subdomain ? (
+                    isEditingSubdomain ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center border-2 border-primary/45 focus-within:border-primary rounded-xl px-3 py-1.5 bg-background flex-1">
+                          <input
+                            value={subdomainValue}
+                            onChange={(e) => setSubdomainValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                            className="bg-transparent outline-none text-sm font-bold text-foreground w-full text-right"
+                            placeholder="my-store"
+                          />
+                          <span className="text-muted-foreground text-xs font-semibold ml-1">.qstack.com.ng</span>
+                        </div>
+                        <button
+                          onClick={handleSubdomainSave}
+                          disabled={updateStoreMutation.isPending || subdomainValue === (store.subdomain || "")}
+                          className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+                        >
+                          {updateStoreMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSubdomainValue(store.subdomain || "");
+                            setIsEditingSubdomain(false);
+                          }}
+                          className="w-9 h-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-sm font-mono font-bold text-foreground">
+                          {store.subdomain ? `${store.subdomain}.qstack.com.ng` : "Not set"}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] font-bold text-primary hover:bg-primary/10 rounded-lg cursor-pointer"
+                          onClick={() => {
+                            setSubdomainValue(store.subdomain || "");
+                            setIsEditingSubdomain(true);
+                          }}
+                        >
+                          Configure
+                        </Button>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <span className="text-sm font-bold text-muted-foreground/60 italic">
+                        Requires Enterprise Plan
+                      </span>
+                      <Link href="/subscription">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[10px] font-bold border-primary/20 text-primary hover:bg-primary/5 rounded-lg cursor-pointer flex items-center gap-1"
+                        >
+                          <Crown className="w-3 h-3 text-amber-500" />
+                          Upgrade
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
               <InfoRow
                 icon={Activity}
                 label="Operational Status"
