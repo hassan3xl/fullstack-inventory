@@ -141,6 +141,8 @@ SOCIALACCOUNT_PROVIDERS = {
         'AUTH_PARAMS': {'access_type': 'online'},
     }
 }
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.CustomSocialAccountAdapter"
+
 
 REST_USE_JWT = True
 JWT_AUTH_COOKIE = 'jwt-auth'

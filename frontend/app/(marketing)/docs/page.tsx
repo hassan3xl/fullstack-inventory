@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   ShieldCheck,
@@ -22,13 +22,7 @@ import { apiService } from "@/lib/services/apiService";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
-
-const sections = [
-  { id: "getting-started", title: "Getting Started", icon: BookOpen },
-  { id: "how-to-use", title: "How to Use", icon: HelpCircle },
-  { id: "terms", title: "Terms of Use", icon: ShieldCheck },
-  { id: "register-app", title: "Get the App", icon: Laptop },
-];
+import Link from "next/link";
 
 type FormValues = {
   first_name: string;
@@ -43,6 +37,20 @@ function DocsContent() {
   const tab = searchParams.get("tab");
   const [activeSection, setActiveSection] = useState("getting-started");
 
+  const router = useRouter();
+
+  const sections = [
+    { id: "getting-started", title: "Getting Started", icon: BookOpen },
+    { id: "how-to-use", title: "How to Use", icon: HelpCircle },
+    { id: "terms", title: "Terms of Use", icon: ShieldCheck },
+    {
+      id: "register",
+      title: "Register",
+      icon: Laptop,
+      onClick: () => router.push("/register"),
+      className: "text-blue-500",
+    },
+  ];
   // Registration Form Status States
   const [statusMsg, setStatusMsg] = useState<{
     type: "success" | "error";
@@ -124,6 +132,18 @@ function DocsContent() {
           <nav className="space-y-2">
             {sections.map((section) => {
               const Icon = section.icon;
+              if (section.onClick) {
+                return (
+                  <button
+                    key={section.id}
+                    onClick={section.onClick}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 text-left cursor-pointer`}
+                  >
+                    <Icon size={18} />
+                    {section.title}
+                  </button>
+                );
+              }
               const isActive = activeSection === section.id;
               return (
                 <button
@@ -174,6 +194,63 @@ function DocsContent() {
                     operates completely in real-time, providing deep insights at
                     a glance.
                   </p>
+                </div>
+              </div>
+              <div className="mt-8 border border-border/50 rounded-xl bg-muted/20 p-6 space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                  <Info size={16} /> Store Classification Reference
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Choosing the correct classification ensures your workspace
+                  starts with configuration rules and layouts optimized for your
+                  specific trade.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
+                    <span className="text-xs font-black text-foreground block">
+                      Pharmacy & Medicine
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      Optimized for medicines, drugs, prescription tracking, and
+                      shelf-life expiration safety alerts.
+                    </span>
+                  </div>
+                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
+                    <span className="text-xs font-black text-foreground block">
+                      Electronics & Gadgets
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      Optimized for serialized high-value items, appliances,
+                      tech devices, and brand classifications.
+                    </span>
+                  </div>
+                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
+                    <span className="text-xs font-black text-foreground block">
+                      Clothing & Apparel
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      Optimized for boutique apparel, fashion items, footwear,
+                      and accessory size variations.
+                    </span>
+                  </div>
+                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
+                    <span className="text-xs font-black text-foreground block">
+                      General Retail
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      A versatile setup for general merchant stores, convenience
+                      shops, and multi-product retailers.
+                    </span>
+                  </div>
+                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
+                    <span className="text-xs font-black text-foreground block">
+                      Other
+                    </span>
+                    <span className="text-[11px] text-muted-foreground block">
+                      Standard settings for custom inventory segments not
+                      captured by major categories.
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -320,193 +397,7 @@ function DocsContent() {
             </div>
           )}
 
-          {activeSection === "register-app" && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                  <Laptop size={20} />
-                </div>
-                <h2 className="text-2xl font-bold tracking-tight">
-                  Get Quantum Stack
-                </h2>
-              </div>
-
-              <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-                Register your business profile below to get started immediately.
-                Upon registration, your account is active, and you can log in using the temporary credentials sent to your email.
-              </p>
-
-              {statusMsg && (
-                <div
-                  className={`p-4 rounded-lg border text-xs flex gap-3 items-start animate-in fade-in duration-300 ${
-                    statusMsg.type === "success"
-                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
-                      : "bg-destructive/10 border-destructive/20 text-destructive-foreground"
-                  }`}
-                >
-                  {statusMsg.type === "success" ? (
-                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                  ) : (
-                    <Info className="w-5 h-5 shrink-0" />
-                  )}
-                  <div>
-                    <p className="font-bold">
-                      {statusMsg.type === "success"
-                        ? "Registration Successful"
-                        : "Registration Error"}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      {statusMsg.text}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <form
-                onSubmit={handleSubmit(handleRegister)}
-                className="space-y-4 max-w-lg mt-4"
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    name="first_name"
-                    label="First Name"
-                    register={register}
-                    error={errors.first_name}
-                    placeholder="John"
-                    validation={{ required: "First name is required" }}
-                  />
-                  <Input
-                    name="last_name"
-                    label="Last Name"
-                    register={register}
-                    error={errors.last_name}
-                    placeholder="Doe"
-                    validation={{ required: "Last name is required" }}
-                  />
-                </div>
-
-                <Input
-                  name="business_name"
-                  label="Business / Store Name"
-                  register={register}
-                  error={errors.business_name}
-                  icon={Building2}
-                  placeholder="e.g. Acme Pharmacy"
-                  validation={{ required: "Business name is required" }}
-                />
-
-                <Input
-                  name="business_type"
-                  label="Business Type"
-                  field="select"
-                  register={register}
-                  error={errors.business_type}
-                  placeholder="Select Store Classification"
-                  options={[
-                    { value: "pharmacy", label: "Pharmacy & Medicine" },
-                    { value: "electronics", label: "Electronics & Gadgets" },
-                    { value: "clothing", label: "Clothing & Apparel" },
-                    { value: "general", label: "General Retail" },
-                    { value: "other", label: "Other" },
-                  ]}
-                  validation={{ required: "Business type is required" }}
-                />
-
-                <Input
-                  name="admin_email"
-                  label="Owner / Admin Email Address"
-                  type="email"
-                  register={register}
-                  error={errors.admin_email}
-                  icon={Mail}
-                  placeholder="e.g. owner@acmepharmacy.com"
-                  validation={{
-                    required: "Admin email is required",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Invalid email address",
-                    },
-                  }}
-                />
-
-                <div className="pt-2">
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="rounded-lg px-8 h-11 text-xs font-bold shadow-lg shadow-primary/10 w-full sm:w-auto cursor-pointer"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      "Submit Request"
-                    )}
-                  </Button>
-                </div>
-              </form>
-
-              {/* Business Types Reference Card */}
-              <div className="mt-8 border border-border/50 rounded-xl bg-muted/20 p-6 space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-                  <Info size={16} /> Store Classification Reference
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Choosing the correct classification ensures your workspace
-                  starts with configuration rules and layouts optimized for your
-                  specific trade.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">
-                      Pharmacy & Medicine
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block">
-                      Optimized for medicines, drugs, prescription tracking, and
-                      shelf-life expiration safety alerts.
-                    </span>
-                  </div>
-                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">
-                      Electronics & Gadgets
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block">
-                      Optimized for serialized high-value items, appliances,
-                      tech devices, and brand classifications.
-                    </span>
-                  </div>
-                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">
-                      Clothing & Apparel
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block">
-                      Optimized for boutique apparel, fashion items, footwear,
-                      and accessory size variations.
-                    </span>
-                  </div>
-                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">
-                      General Retail
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block">
-                      A versatile setup for general merchant stores, convenience
-                      shops, and multi-product retailers.
-                    </span>
-                  </div>
-                  <div className="p-3 bg-card border border-border/30 rounded-lg space-y-1">
-                    <span className="text-xs font-black text-foreground block">
-                      Other
-                    </span>
-                    <span className="text-[11px] text-muted-foreground block">
-                      Standard settings for custom inventory segments not
-                      captured by major categories.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {activeSection === "get-started" && <Button></Button>}
         </div>
       </div>
     </div>
@@ -515,7 +406,13 @@ function DocsContent() {
 
 export default function DocsPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-sm font-semibold">Loading documentation...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-12 text-center text-sm font-semibold">
+          Loading documentation...
+        </div>
+      }
+    >
       <DocsContent />
     </Suspense>
   );
