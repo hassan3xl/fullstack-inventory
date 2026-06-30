@@ -5,11 +5,15 @@ import { DashboardSkeleton } from "@/components/skeletons/DashboardSkeleton";
 import { FinanceSkeleton } from "@/components/skeletons/FinanceSkeleton";
 import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
+import { OnboardingSkeleton } from "@/components/skeletons/OnboardingSkeleton";
 
 export default function Loader() {
   const pathname = usePathname() || "";
 
   const getPageSkeleton = () => {
+    if (pathname.includes("/onboarding")) {
+      return <OnboardingSkeleton />;
+    }
     if (pathname.includes("/dashboard") || pathname.includes("subscription")) {
       return <DashboardSkeleton />;
     }

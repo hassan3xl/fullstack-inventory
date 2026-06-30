@@ -355,16 +355,24 @@ function Input<T extends FieldValues>({
                 className={`ml-3 transition-colors ${getIconClasses()}`}
               />
             )}
-            <input
-              type={inputType}
-              {...register(name, validation)}
-              placeholder={placeholder}
-              disabled={disabled}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              className={fieldClass}
-              {...props}
-            />
+            {(() => {
+              const { onBlur: formOnBlur, ...registerRest } = register(name, validation);
+              return (
+                <input
+                  type={inputType}
+                  {...registerRest}
+                  placeholder={placeholder}
+                  disabled={disabled}
+                  onFocus={() => setFocused(true)}
+                  onBlur={(e) => {
+                    setFocused(false);
+                    formOnBlur(e);
+                  }}
+                  className={fieldClass}
+                  {...props}
+                />
+              );
+            })()}
             {type === "password" && (
               <button
                 type="button"

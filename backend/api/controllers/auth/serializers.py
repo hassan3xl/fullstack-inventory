@@ -12,6 +12,7 @@ class CustomRegisterSerializer(RegisterSerializer):
     username = None
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)
+    otp = serializers.CharField(required=True, write_only=True)
 
     def validate_email(self, email):
         email = email.lower()
@@ -20,6 +21,21 @@ class CustomRegisterSerializer(RegisterSerializer):
                 "A user with this email already exists."
             )
         return email
+
+    def validate(self, data):
+        data = super().validate(data)
+        email = data.get('email')
+        otp_code = data.get('otp')
+
+        from apps.users.models import OTPRequest
+        try:
+            otp_record = OTPRequest.objects.get(email=email)
+            if otp_record.otp_code != otp_code or not otp_record.is_valid():
+                raise serializers.ValidationError({"otp": "Invalid or expired verification code."})
+        except OTPRequest.DoesNotExist:
+            raise serializers.ValidationError({"otp": "Please request a verification code first."})
+
+        return data
 
     def get_cleaned_data(self):
         data = super().get_cleaned_data()
@@ -33,6 +49,11 @@ class CustomRegisterSerializer(RegisterSerializer):
             profile.first_name = self.validated_data.get('first_name', '')
             profile.last_name = self.validated_data.get('last_name', '')
             profile.save()
+
+            # Clean up the OTP request
+            from apps.users.models import OTPRequest
+            OTPRequest.objects.filter(email=user.email).delete()
+
             return user
 
 

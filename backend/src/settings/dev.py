@@ -66,13 +66,17 @@ else:  # No Redis — fall back to in-memory (local dev / no Redis deploy)
         }
     }
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Try to get Resend API key from environment, fallback to the one loaded by dotenv in config
+RESEND_API_KEY_VAL = os.environ.get('RESEND_API_KEY') or (RESEND_API_KEY if 'RESEND_API_KEY' in globals() else None)
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+if RESEND_API_KEY_VAL and not RESEND_API_KEY_VAL.startswith("re_placeholder"):
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:   
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 EMAIL_HOST = 'smtp.resend.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'resend'
-# Try to get from environ, fallback to the one loaded by dotenv in config
-EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', RESEND_API_KEY)
+EMAIL_HOST_PASSWORD = RESEND_API_KEY_VAL
 DEFAULT_FROM_EMAIL = 'Quantum Stack Inventory <noreply@mail.qstack.com.ng>'

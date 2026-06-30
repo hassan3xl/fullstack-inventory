@@ -142,6 +142,7 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 SOCIALACCOUNT_ADAPTER = "apps.users.adapters.CustomSocialAccountAdapter"
+ACCOUNT_ADAPTER = "apps.users.adapters.CustomAccountAdapter"
 
 
 REST_USE_JWT = True

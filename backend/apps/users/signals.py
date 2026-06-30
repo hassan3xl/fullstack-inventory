@@ -9,17 +9,19 @@ def create_user_profile(sender, instance, created, **kwargs):
         Profile.objects.get_or_create(user=instance)
         
         # Create allauth EmailAddress record so the user can log in via email
-        try:
-            from allauth.account.models import EmailAddress
-            EmailAddress.objects.get_or_create(
-                user=instance,
-                email=instance.email,
-                defaults={'verified': True, 'primary': True}
-            )
-        except Exception as email_err:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to create EmailAddress for user {instance.email}: {email_err}")
+        # Skip this if user registration is coming from allauth to prevent setup_user_email from failing
+        if not getattr(instance, '_from_allauth', False):
+            try:
+                from allauth.account.models import EmailAddress
+                EmailAddress.objects.get_or_create(
+                    user=instance,
+                    email=instance.email,
+                    defaults={'verified': True, 'primary': True}
+                )
+            except Exception as email_err:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to create EmailAddress for user {instance.email}: {email_err}")
         
         # Send welcome email and in-app notification to the newly created user
         try:
