@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import GoogleLogin, RequestOTPView, VerifyOTPView, ResetPasswordView, TenantLoginView, CheckUserView
+from .views import GoogleLogin, RequestOTPView, RegisterOTPRequestView, VerifyOTPView, ResetPasswordView, TenantLoginView, CheckUserView
 from .user_view import AuthenticatedUserView
 from django.urls import include
 from django.views.generic import TemplateView
@@ -22,6 +22,7 @@ urlpatterns = [
     
     # 5. Your Custom OTP Password Reset (Keep your existing views here)
     path('otp/request/', RequestOTPView.as_view(), name='otp_request'),
+    path('otp/request-register/', RegisterOTPRequestView.as_view(), name='otp_request_register'),
     path('otp/verify/', VerifyOTPView.as_view(), name='otp_verify'),
     path('password-reset/', ResetPasswordView.as_view(), name='password_reset'),
     path('check-user/', CheckUserView.as_view(), name='check_user'),

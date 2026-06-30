@@ -5,14 +5,38 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.views import APIView
-# from users.utils.send_otp import send_otp_email
-# from users.models import OTPRequest
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+import random
+from apps.users.models import OTPRequest
 
-class OTPRequest():
-    pass
-
-def send_otp_email():
-    pass 
+def send_otp_email(email, code):
+    subject = "Your Verification Code - Quantum Stack"
+    message = f"Your verification code is: {code}\n\nThis code will expire in 10 minutes."
+    
+    html_message = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <h2 style="color: #4f46e5; text-align: center;">Quantum Stack</h2>
+        <p>Hello,</p>
+        <p>Please use the verification code below to complete your request. The code is valid for 10 minutes.</p>
+        <div style="font-size: 24px; font-weight: bold; text-align: center; margin: 30px 0; padding: 15px; background-color: #f3f4f6; color: #111827; border-radius: 6px; letter-spacing: 2px;">
+            {code}
+        </div>
+        <p>If you did not make this request, please ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;" />
+        <p style="font-size: 12px; color: #6b7280; text-align: center;">Quantum Stack Inventory &copy; 2026</p>
+    </div>
+    """
+    
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        html_message=html_message,
+        fail_silently=False
+    )
 
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
@@ -133,17 +157,55 @@ class RequestOTPView(APIView):
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if user exists (for password reset flow)
-        # For Registration, you might skip this check.
-        if not User.objects.filter(email=email).exists():
-             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        if not User.objects.filter(email__iexact=email).exists():
+             return Response({"error": "User with this email not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        send_otp_email(email)
-        return Response({"message": "OTP sent successfully"})
+        # Generate OTP
+        code = f"{random.randint(100000, 999999)}"
+        
+        # Save OTP to database
+        OTPRequest.objects.update_or_create(
+            email=email,
+            defaults={'otp_code': code, 'created_at': timezone.now(), 'is_verified': False}
+        )
+
+        try:
+            send_otp_email(email, code)
+            return Response({"message": "OTP sent successfully"})
+        except Exception as e:
+            return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RegisterOTPRequestView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if user already exists
+        if User.objects.filter(email__iexact=email).exists():
+             return Response({"error": "A user with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate OTP
+        code = f"{random.randint(100000, 999999)}"
+        
+        # Save OTP to database
+        OTPRequest.objects.update_or_create(
+            email=email,
+            defaults={'otp_code': code, 'created_at': timezone.now(), 'is_verified': False}
+        )
+
+        try:
+            send_otp_email(email, code)
+            return Response({"message": "Verification code sent successfully."})
+        except Exception as e:
+            return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyOTPView(APIView):
     def post(self, request):
         email = request.data.get('email')
         otp_code = request.data.get('otp')
+        if not email or not otp_code:
+            return Response({"error": "Email and OTP code are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             otp_record = OTPRequest.objects.get(email=email)
@@ -151,7 +213,6 @@ class VerifyOTPView(APIView):
             return Response({"error": "Request new OTP"}, status=status.HTTP_400_BAD_REQUEST)
 
         if otp_record.otp_code == otp_code and otp_record.is_valid():
-            # Mark as verified so it can be used for the next step (reset password)
             otp_record.is_verified = True
             otp_record.save()
             return Response({"message": "OTP Verified Successfully"})
