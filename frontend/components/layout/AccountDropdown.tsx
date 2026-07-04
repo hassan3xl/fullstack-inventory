@@ -183,7 +183,9 @@ export function AccountDropdown() {
                   <DropdownMenuItem asChild>
                     <Link
                       href="/account"
-                      onClick={(e) => !isOnline && handleOfflineClick(e, "Account profile")}
+                      onClick={(e) =>
+                        !isOnline && handleOfflineClick(e, "Account profile")
+                      }
                       className={`cursor-pointer flex items-center gap-2 ${!isOnline ? "opacity-50" : ""}`}
                     >
                       <User className="h-4 w-4" />
@@ -204,11 +206,10 @@ export function AccountDropdown() {
                   <DropdownMenuItem asChild>
                     <Link
                       href="/store"
-                      onClick={(e) => !isOnline && handleOfflineClick(e, "Store details")}
-                      className={`cursor-pointer flex items-center gap-2 ${!isOnline ? "opacity-50" : ""}`}
+                      className="cursor-pointer flex items-center gap-2"
                     >
                       <ShoppingBag className="h-4 w-4" />
-                      Store {!isOnline && " (Online Only)"}
+                      Store
                     </Link>
                   </DropdownMenuItem>
 
@@ -216,7 +217,9 @@ export function AccountDropdown() {
                     <DropdownMenuItem asChild>
                       <Link
                         href="/settings"
-                        onClick={(e) => !isOnline && handleOfflineClick(e, "Settings")}
+                        onClick={(e) =>
+                          !isOnline && handleOfflineClick(e, "Settings")
+                        }
                         className={`cursor-pointer flex items-center gap-2 ${!isOnline ? "opacity-50" : ""}`}
                       >
                         <Settings2 className="h-4 w-4" />
@@ -250,8 +253,8 @@ export function AccountDropdown() {
                                 !isOnline
                                   ? "opacity-30 cursor-not-allowed"
                                   : isCurrent
-                                  ? "bg-primary/10 text-primary font-bold"
-                                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    ? "bg-primary/10 text-primary font-bold"
+                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
                               }`}
                             >
                               <span className="truncate max-w-[120px]">
@@ -282,7 +285,9 @@ export function AccountDropdown() {
                           }
                         }}
                         className={`cursor-pointer flex items-center gap-2 font-semibold ${
-                          !isOnline ? "opacity-50 text-muted-foreground" : "text-primary focus:text-primary"
+                          !isOnline
+                            ? "opacity-50 text-muted-foreground"
+                            : "text-primary focus:text-primary"
                         }`}
                       >
                         <Plus className="h-4 w-4" />
