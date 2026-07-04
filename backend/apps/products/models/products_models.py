@@ -56,7 +56,8 @@ class Product(TenantBaseModel):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['category', '-created_at']),
+            models.Index(fields=['tenant', 'category', '-created_at']),
+            models.Index(fields=['tenant', '-created_at']),
         ]
 
     @property
@@ -155,6 +156,10 @@ class StockBatch(TenantBaseModel):
     class Meta:
         ordering = ['expiry_date']
         verbose_name_plural = "Stock Batches"
+        indexes = [
+            models.Index(fields=['tenant', 'product']),
+            models.Index(fields=['tenant', 'expiry_date']),
+        ]
 
     def __str__(self):
         return f"{self.product.name} - #{self.batch_number} ({self.quantity} units)"
@@ -192,6 +197,9 @@ class ProductInventory(TenantBaseModel):
 
     class Meta:
         verbose_name_plural = "Product Inventories"
+        indexes = [
+            models.Index(fields=['tenant', 'product']),
+        ]
 
     @property
     def is_in_stock(self):

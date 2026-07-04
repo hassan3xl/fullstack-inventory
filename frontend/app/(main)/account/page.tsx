@@ -23,11 +23,30 @@ import {
 } from "@/lib/hooks/profile.hook";
 import { User, Lock, Eye, CheckCircle2, Moon, Loader2 } from "lucide-react";
 
+import { useIsOffline } from "@/lib/hooks/useIsOffline";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+
 type ActiveTab = "profile" | "security" | "appearance";
 
 const AccountPage = () => {
+  const isOffline = useIsOffline();
   const { user, isAdmin, isOwner } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>("profile");
+
+  if (isOffline) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8">
+        <Header
+          title="Account Settings"
+          subtitle="Manage your profile information, password, and preferences."
+        />
+        <OfflinePlaceholder
+          title="Account Settings is Offline"
+          description="Updating your personal details, changing passwords, or configuring security details requires an active internet connection to authenticate with the identity server."
+        />
+      </div>
+    );
+  }
 
   // Profile hook
   const { data: profile, isLoading: isProfileLoading } = useGetProfile();

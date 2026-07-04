@@ -72,38 +72,26 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
     }
   }, [isModalOpen, reset, unitsPerPack]);
 
-  // Update expiry date when production date or best before days change
-  useEffect(() => {
-    if (productionDate && bestBeforeDays) {
-      const prodDate = new Date(productionDate);
-      const days = parseInt(bestBeforeDays);
-      if (!isNaN(prodDate.getTime()) && !isNaN(days)) {
-        const expDate = new Date(
-          prodDate.getTime() + days * 24 * 60 * 60 * 1000,
-        );
-        const expDateStr = expDate.toISOString().split("T")[0];
-        if (expiryDate !== expDateStr) {
-          setValue("expiry_date", expDateStr);
-        }
-      }
+  const updateExpiryFromProdAndDays = (prodDateStr: string, daysStr: string) => {
+    if (!prodDateStr || !daysStr) return;
+    const prodDate = new Date(prodDateStr);
+    const days = parseInt(daysStr);
+    if (!isNaN(prodDate.getTime()) && !isNaN(days)) {
+      const expDate = new Date(prodDate.getTime() + days * 24 * 60 * 60 * 1000);
+      setValue("expiry_date", expDate.toISOString().split("T")[0]);
     }
-  }, [productionDate, bestBeforeDays, setValue, expiryDate]);
+  };
 
-  // Update best before days when expiry date or production date change
-  useEffect(() => {
-    if (productionDate && expiryDate) {
-      const prodDate = new Date(productionDate);
-      const expDate = new Date(expiryDate);
-      if (!isNaN(prodDate.getTime()) && !isNaN(expDate.getTime())) {
-        const diffTime = expDate.getTime() - prodDate.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const diffDaysStr = diffDays >= 0 ? String(diffDays) : "0";
-        if (bestBeforeDays !== diffDaysStr) {
-          setValue("best_before_days", diffDaysStr);
-        }
-      }
+  const updateDaysFromProdAndExpiry = (prodDateStr: string, expDateStr: string) => {
+    if (!prodDateStr || !expDateStr) return;
+    const prodDate = new Date(prodDateStr);
+    const expDate = new Date(expDateStr);
+    if (!isNaN(prodDate.getTime()) && !isNaN(expDate.getTime())) {
+      const diffTime = expDate.getTime() - prodDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setValue("best_before_days", diffDays >= 0 ? String(diffDays) : "0");
     }
-  }, [productionDate, expiryDate, setValue, bestBeforeDays]);
+  };
 
   const onSubmit = async (data: FormValues) => {
     const rawQty = parseInt(data.quantity);
@@ -215,6 +203,18 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
               type="date"
               icon={Calendar}
               error={errors.production_date}
+              validation={{
+                onChange: (e: any) => {
+                  const pDate = e.target.value;
+                  const bDays = watch("best_before_days");
+                  const eDate = watch("expiry_date");
+                  if (bDays) {
+                    updateExpiryFromProdAndDays(pDate, bDays);
+                  } else if (eDate) {
+                    updateDaysFromProdAndExpiry(pDate, eDate);
+                  }
+                }
+              }}
             />
 
             <Input
@@ -227,6 +227,13 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
               error={errors.best_before_days}
               validation={{
                 min: { value: 0, message: "Value cannot be negative" },
+                onChange: (e: any) => {
+                  const bDays = e.target.value;
+                  const pDate = watch("production_date");
+                  if (pDate) {
+                    updateExpiryFromProdAndDays(pDate, bDays);
+                  }
+                }
               }}
             />
           </div>
@@ -238,6 +245,15 @@ const ReceiveBatchModal: React.FC<ReceiveBatchModalProps> = ({
             type="date"
             icon={Calendar}
             error={errors.expiry_date}
+            validation={{
+              onChange: (e: any) => {
+                const eDate = e.target.value;
+                const pDate = watch("production_date");
+                if (pDate) {
+                  updateDaysFromProdAndExpiry(pDate, eDate);
+                }
+              }
+            }}
           />
         </div>
 

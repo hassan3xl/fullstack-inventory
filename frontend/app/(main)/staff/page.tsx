@@ -9,7 +9,10 @@ import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/hooks/queryKeys";
 import { useGetStore } from "@/lib/hooks/store.hook";
 import { toast } from "sonner";
+import { useIsOffline } from "@/lib/hooks/useIsOffline";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import StaffForm from "@/components/forms/StaffForm";
+
 const getRoleBadgeStyle = (role: string) => {
   switch (role?.toLowerCase()) {
     case "owner":
@@ -26,6 +29,7 @@ const getRoleBadgeStyle = (role: string) => {
 };
 
 export default function StaffClient() {
+  const isOffline = useIsOffline();
   const { data: store } = useGetStore();
   const isFreePlan = store?.current_plan?.slug === "free";
 
@@ -33,6 +37,21 @@ export default function StaffClient() {
   const [isAdding, setIsAdding] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  if (isOffline) {
+    return (
+      <div className="space-y-8 pb-12">
+        <Header
+          title="Staff Management"
+          subtitle="Manage your team members, cashiers, managers, and access permissions."
+        />
+        <OfflinePlaceholder
+          title="Staff Management is Offline"
+          description="Managing staff accounts, inviting team members, or changing roles requires an active internet connection to securely communicate with the authentication server."
+        />
+      </div>
+    );
+  }
 
   // Fetch Staff List
   const { data: staff, isLoading } = useQuery({

@@ -39,9 +39,10 @@ class TenantMiddleware:
         if tenant:
             set_current_tenant(tenant)
 
-        response = self.get_response(request)
-        
-        # Clean up after request
-        clear_current_tenant()
+        try:
+            response = self.get_response(request)
+        finally:
+            # Clean up after request (resets thread locals & DB context)
+            clear_current_tenant()
         
         return response

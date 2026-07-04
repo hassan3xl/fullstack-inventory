@@ -11,6 +11,7 @@ interface GoogleSignInButtonProps {
   setIsLoading: (loading: boolean) => void;
   text?: string;
   onSuccess?: (response: any) => void;
+  disabled?: boolean;
 }
 
 declare global {
@@ -24,6 +25,7 @@ export default function GoogleSignInButton({
   setIsLoading,
   text = "Continue with Google",
   onSuccess,
+  disabled,
 }: GoogleSignInButtonProps) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
@@ -48,6 +50,15 @@ export default function GoogleSignInButton({
   }, []);
 
   const handleGoogleLogin = () => {
+    if (disabled) return;
+    
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      toast.error("Offline", {
+        description: "Google Login requires an active internet connection.",
+      });
+      return;
+    }
+
     if (!scriptLoaded || !window.google) {
       toast.error("Google Sign-In is still loading. Please try again in a moment.");
       return;
@@ -125,7 +136,7 @@ export default function GoogleSignInButton({
       type="button"
       variant="outline"
       onClick={handleGoogleLogin}
-      disabled={isLoading || !scriptLoaded}
+      disabled={isLoading || !scriptLoaded || disabled}
       className="w-full flex items-center justify-center gap-2 h-11 border border-border bg-background hover:bg-accent hover:text-accent-foreground text-sm font-medium transition-all duration-200"
     >
       <svg className="w-5 h-5 min-w-[20px]" viewBox="0 0 24 24">

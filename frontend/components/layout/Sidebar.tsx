@@ -31,7 +31,8 @@ export default function Sidebar() {
   const pathname = usePathname();
   const sidebarRef = useRef<HTMLElement>(null);
   const { data: stats } = useGetInventoryStats();
-  const { user, isOwner, isAdmin, isManager, isCashier, storeRole } = useAuth();
+  const { user, isOwner, isAdmin, isManager, isCashier, storeRole, isOnline } =
+    useAuth();
   const { data: store } = useGetStore();
 
   const isActive = (path: string) => {
@@ -134,22 +135,43 @@ export default function Sidebar() {
                 </Link>
               )}
 
-              {canViewStaff && (
-                <Link
-                  href="/staff"
-                  onClick={closeSidebar}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                    isActive("/staff")
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "hover:bg-accent/50 text-foreground"
-                  }`}
-                >
-                  <Users size={18} />
-                  <span className="font-bold text-sm tracking-tight">
-                    Staff Management
-                  </span>
-                </Link>
-              )}
+              {canViewStaff &&
+                (!isOnline ? (
+                  <button
+                    onClick={() => {
+                      closeSidebar();
+                      toast.error("Offline Feature", {
+                        description:
+                          "Staff management is only available online.",
+                      });
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                  >
+                    <Users size={18} />
+                    <span className="font-bold text-sm tracking-tight text-left flex-1">
+                      Staff Management
+                    </span>
+                    <Lock
+                      size={14}
+                      className="text-muted-foreground/45 shrink-0"
+                    />
+                  </button>
+                ) : (
+                  <Link
+                    href="/staff"
+                    onClick={closeSidebar}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                      isActive("/staff")
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "hover:bg-accent/50 text-foreground"
+                    }`}
+                  >
+                    <Users size={18} />
+                    <span className="font-bold text-sm tracking-tight">
+                      Staff Management
+                    </span>
+                  </Link>
+                ))}
             </div>
           </div>
 
@@ -256,6 +278,26 @@ export default function Sidebar() {
                       className="text-muted-foreground/45 shrink-0"
                     />
                   </button>
+                ) : !isOnline ? (
+                  <button
+                    onClick={() => {
+                      closeSidebar();
+                      toast.error("Offline Feature", {
+                        description:
+                          "Finance features are only available online.",
+                      });
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                  >
+                    <TrendingUp size={18} />
+                    <span className="font-bold text-sm tracking-tight text-left flex-1">
+                      Finance
+                    </span>
+                    <Lock
+                      size={14}
+                      className="text-muted-foreground/45 shrink-0"
+                    />
+                  </button>
                 ) : (
                   <Link
                     href="/finance"
@@ -278,70 +320,83 @@ export default function Sidebar() {
           {/* System Navigation */}
           <div className="pt-4 border-t border-border/50">
             <div className="space-y-1">
-              {canViewSettings && (
-                <Link
-                  href="/settings"
-                  onClick={closeSidebar}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                    isActive("/settings")
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Settings size={18} />
-                  <span className="font-bold text-sm tracking-tight">
-                    Settings
-                  </span>
-                </Link>
-              )}
+              {canViewSettings &&
+                (!isOnline ? (
+                  <button
+                    onClick={() => {
+                      closeSidebar();
+                      toast.error("Offline Feature", {
+                        description: "Settings are only available online.",
+                      });
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                  >
+                    <Settings size={18} />
+                    <span className="font-bold text-sm tracking-tight text-left flex-1">
+                      Settings
+                    </span>
+                    <Lock
+                      size={14}
+                      className="text-muted-foreground/45 shrink-0"
+                    />
+                  </button>
+                ) : (
+                  <Link
+                    href="/settings"
+                    onClick={closeSidebar}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                      isActive("/settings")
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Settings size={18} />
+                    <span className="font-bold text-sm tracking-tight">
+                      Settings
+                    </span>
+                  </Link>
+                ))}
 
-              {isAdmin && (
-                <Link
-                  href="/subscription"
-                  onClick={closeSidebar}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
-                    isActive("/subscription")
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <CreditCard size={18} />
-                  <span className="font-bold text-sm tracking-tight">
-                    Subscription
-                  </span>
-                </Link>
-              )}
+              {isAdmin &&
+                (!isOnline ? (
+                  <button
+                    onClick={() => {
+                      closeSidebar();
+                      toast.error("Offline Feature", {
+                        description:
+                          "Subscription management is only available online.",
+                      });
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                  >
+                    <CreditCard size={18} />
+                    <span className="font-bold text-sm tracking-tight text-left flex-1">
+                      Subscription
+                    </span>
+                    <Lock
+                      size={14}
+                      className="text-muted-foreground/45 shrink-0"
+                    />
+                  </button>
+                ) : (
+                  <Link
+                    href="/subscription"
+                    onClick={closeSidebar}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                      isActive("/subscription")
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <CreditCard size={18} />
+                    <span className="font-bold text-sm tracking-tight">
+                      Subscription
+                    </span>
+                  </Link>
+                ))}
             </div>
           </div>
         </div>
-
-        {/* Sidebar Footer / Current Plan */}
-        {store && (
-          <div className="p-4 border-t border-border/50 bg-accent/20 m-4 rounded-xl shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 animate-pulse">
-                <Crown size={16} className="text-yellow-500 fill-yellow-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                  Current Plan
-                </p>
-                <p className="text-xs font-bold text-foreground truncate capitalize">
-                  {store.current_plan?.name || "Free Plan"}
-                </p>
-              </div>
-            </div>
-            {isAdmin && (
-              <Link
-                href="/subscription"
-                onClick={closeSidebar}
-                className="mt-3 block text-center text-[11px] font-black uppercase tracking-wider text-primary hover:text-primary/80 transition-colors"
-              >
-                Manage Subscription →
-              </Link>
-            )}
-          </div>
-        )}
       </aside>
     </>
   );

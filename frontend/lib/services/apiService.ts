@@ -1,4 +1,5 @@
 import { getAccessToken as getServerAccessToken, resetAuthCookies } from "../actions/auth.actions";
+import { DISABLE_OFFLINE } from "../config/offline";
 
 function getClientAccessToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -129,6 +130,14 @@ async function buildHeaders(contentType: string | null = "application/json"): Pr
 
 export const apiService = {
   get: async function (url: string, params?: Record<string, any>): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        return offlineInterceptor.handleGet(url, params);
+      }
+    }
+
     const headers = await buildHeaders();
 
     let finalUrl = url;
@@ -145,12 +154,36 @@ export const apiService = {
       }
     }
 
-    return fetchWithCatch(finalUrl, {
-      method: "GET",
-      credentials: "include",
-      headers,
-    });
+    try {
+      const res = await fetchWithCatch(finalUrl, {
+        method: "GET",
+        credentials: "include",
+        headers,
+      });
+
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && url.replace(/^\/api/, "") === "/business/profile/") {
+        const tenantId = getClientActiveTenantId();
+        if (tenantId) {
+          localStorage.setItem(`qstack_business_profile_${tenantId}`, JSON.stringify(res));
+        }
+      }
+
+      return res;
+    } catch (error) {
+      if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        try {
+          return await offlineInterceptor.handleGet(url, params);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
+
   postWithoutToken: async function (url: string, data: any): Promise<any> {
     return fetchWithCatch(url, {
       method: "POST",
@@ -163,6 +196,14 @@ export const apiService = {
   },
 
   post: async function (url: string, data?: any): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        return offlineInterceptor.handleWrite("POST", url, data);
+      }
+    }
+
     const headers = await buildHeaders();
 
     const options: RequestInit = {
@@ -175,59 +216,215 @@ export const apiService = {
       options.body = JSON.stringify(data);
     }
 
-    return fetchWithCatch(url, options);
+    try {
+      return await fetchWithCatch(url, options);
+    } catch (error: any) {
+      const isNetworkError = error instanceof TypeError || error?.message === "Failed to fetch" || !error.status;
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && isNetworkError) {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        try {
+          return await offlineInterceptor.handleWrite("POST", url, data);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
 
   postFormData: async function (url: string, formData: FormData): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        const dataObj: Record<string, any> = {};
+        formData.forEach((value, key) => {
+          if (typeof value === "string") dataObj[key] = value;
+        });
+        return offlineInterceptor.handleWrite("POST", url, dataObj);
+      }
+    }
+
     const headers = await buildHeaders(null);
 
-    return fetchWithCatch(url, {
-      method: "POST",
-      credentials: "include",
-      headers,
-      body: formData,
-    });
+    try {
+      return await fetchWithCatch(url, {
+        method: "POST",
+        credentials: "include",
+        headers,
+        body: formData,
+      });
+    } catch (error: any) {
+      const isNetworkError = error instanceof TypeError || error?.message === "Failed to fetch" || !error.status;
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && isNetworkError) {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        const dataObj: Record<string, any> = {};
+        formData.forEach((value, key) => {
+          if (typeof value === "string") dataObj[key] = value;
+        });
+        try {
+          return await offlineInterceptor.handleWrite("POST", url, dataObj);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
 
   patchFormData: async function (url: string, formData: FormData): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        const dataObj: Record<string, any> = {};
+        formData.forEach((value, key) => {
+          if (typeof value === "string") dataObj[key] = value;
+        });
+        return offlineInterceptor.handleWrite("PATCH", url, dataObj);
+      }
+    }
+
     const headers = await buildHeaders(null);
 
-    return fetchWithCatch(url, {
-      method: "PATCH",
-      credentials: "include",
-      headers,
-      body: formData,
-    });
+    try {
+      return await fetchWithCatch(url, {
+        method: "PATCH",
+        credentials: "include",
+        headers,
+        body: formData,
+      });
+    } catch (error: any) {
+      const isNetworkError = error instanceof TypeError || error?.message === "Failed to fetch" || !error.status;
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && isNetworkError) {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        const dataObj: Record<string, any> = {};
+        formData.forEach((value, key) => {
+          if (typeof value === "string") dataObj[key] = value;
+        });
+        try {
+          return await offlineInterceptor.handleWrite("PATCH", url, dataObj);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
 
   put: async function (url: string, data: any): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        return offlineInterceptor.handleWrite("PUT", url, data);
+      }
+    }
+
     const headers = await buildHeaders();
 
-    return fetchWithCatch(url, {
-      method: "PUT",
-      credentials: "include",
-      headers,
-      body: JSON.stringify(data),
-    });
+    try {
+      return await fetchWithCatch(url, {
+        method: "PUT",
+        credentials: "include",
+        headers,
+        body: JSON.stringify(data),
+      });
+    } catch (error: any) {
+      const isNetworkError = error instanceof TypeError || error?.message === "Failed to fetch" || !error.status;
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && isNetworkError) {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        try {
+          return await offlineInterceptor.handleWrite("PUT", url, data);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
+
   patch: async function (url: string, data: any): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        return offlineInterceptor.handleWrite("PATCH", url, data);
+      }
+    }
+
     const headers = await buildHeaders();
 
-    return fetchWithCatch(url, {
-      method: "PATCH",
-      credentials: "include",
-      headers,
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetchWithCatch(url, {
+        method: "PATCH",
+        credentials: "include",
+        headers,
+        body: JSON.stringify(data),
+      });
+
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && url.replace(/^\/api/, "") === "/business/profile/") {
+        const tenantId = getClientActiveTenantId();
+        if (tenantId) {
+          localStorage.setItem(`qstack_business_profile_${tenantId}`, JSON.stringify(res));
+        }
+      }
+
+      return res;
+    } catch (error: any) {
+      const isNetworkError = error instanceof TypeError || error?.message === "Failed to fetch" || !error.status;
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && isNetworkError) {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        try {
+          return await offlineInterceptor.handleWrite("PATCH", url, data);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
 
   delete: async function (url: string): Promise<any> {
+    if (!DISABLE_OFFLINE && typeof window !== "undefined") {
+      const { getIsOfflineStatus } = await import("../hooks/useIsOffline");
+      if (getIsOfflineStatus() || !navigator.onLine) {
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        return offlineInterceptor.handleWrite("DELETE", url, null);
+      }
+    }
+
     const headers = await buildHeaders(null);
 
-    return fetchWithCatch(url, {
-      method: "DELETE",
-      headers,
-    });
+    try {
+      return await fetchWithCatch(url, {
+        method: "DELETE",
+        headers,
+      });
+    } catch (error: any) {
+      const isNetworkError = error instanceof TypeError || error?.message === "Failed to fetch" || !error.status;
+      if (!DISABLE_OFFLINE && typeof window !== "undefined" && isNetworkError) {
+        const { setGlobalOffline } = await import("../hooks/useIsOffline");
+        setGlobalOffline(true);
+        const { offlineInterceptor } = await import("./offlineInterceptor");
+        try {
+          return await offlineInterceptor.handleWrite("DELETE", url, null);
+        } catch {
+          throw error;
+        }
+      }
+      throw error;
+    }
   },
 };
 

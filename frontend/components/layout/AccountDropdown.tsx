@@ -62,7 +62,15 @@ export function AccountDropdown() {
     isManager,
     isCashier,
     isStaff,
+    isOnline,
   } = useAuth();
+
+  const handleOfflineClick = (e: React.MouseEvent, featureName: string) => {
+    e.preventDefault();
+    toast.error("Offline Feature", {
+      description: `${featureName} is only available online. Please reconnect to access it.`,
+    });
+  };
 
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
@@ -175,10 +183,11 @@ export function AccountDropdown() {
                   <DropdownMenuItem asChild>
                     <Link
                       href="/account"
-                      className="cursor-pointer flex items-center gap-2"
+                      onClick={(e) => !isOnline && handleOfflineClick(e, "Account profile")}
+                      className={`cursor-pointer flex items-center gap-2 ${!isOnline ? "opacity-50" : ""}`}
                     >
                       <User className="h-4 w-4" />
-                      Account
+                      Account {!isOnline && " (Online Only)"}
                     </Link>
                   </DropdownMenuItem>
 
@@ -195,10 +204,11 @@ export function AccountDropdown() {
                   <DropdownMenuItem asChild>
                     <Link
                       href="/store"
-                      className="cursor-pointer flex items-center gap-2"
+                      onClick={(e) => !isOnline && handleOfflineClick(e, "Store details")}
+                      className={`cursor-pointer flex items-center gap-2 ${!isOnline ? "opacity-50" : ""}`}
                     >
                       <ShoppingBag className="h-4 w-4" />
-                      Store
+                      Store {!isOnline && " (Online Only)"}
                     </Link>
                   </DropdownMenuItem>
 
@@ -206,10 +216,11 @@ export function AccountDropdown() {
                     <DropdownMenuItem asChild>
                       <Link
                         href="/settings"
-                        className="cursor-pointer flex items-center gap-2"
+                        onClick={(e) => !isOnline && handleOfflineClick(e, "Settings")}
+                        className={`cursor-pointer flex items-center gap-2 ${!isOnline ? "opacity-50" : ""}`}
                       >
                         <Settings2 className="h-4 w-4" />
-                        Settings
+                        Settings {!isOnline && " (Online Only)"}
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -227,9 +238,18 @@ export function AccountDropdown() {
                           return (
                             <button
                               key={t.id}
-                              onClick={() => handleSwitchTenant(t.id)}
+                              onClick={(e) => {
+                                if (!isOnline) {
+                                  handleOfflineClick(e, "Switching stores");
+                                } else {
+                                  handleSwitchTenant(t.id);
+                                }
+                              }}
+                              disabled={!isOnline}
                               className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs text-left cursor-pointer transition-all ${
-                                isCurrent
+                                !isOnline
+                                  ? "opacity-30 cursor-not-allowed"
+                                  : isCurrent
                                   ? "bg-primary/10 text-primary font-bold"
                                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
                               }`}
@@ -254,11 +274,19 @@ export function AccountDropdown() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => setIsBranchModalOpen(true)}
-                        className="cursor-pointer flex items-center gap-2 text-primary focus:text-primary font-semibold"
+                        onClick={(e) => {
+                          if (!isOnline) {
+                            handleOfflineClick(e, "Creating a branch");
+                          } else {
+                            setIsBranchModalOpen(true);
+                          }
+                        }}
+                        className={`cursor-pointer flex items-center gap-2 font-semibold ${
+                          !isOnline ? "opacity-50 text-muted-foreground" : "text-primary focus:text-primary"
+                        }`}
                       >
                         <Plus className="h-4 w-4" />
-                        Create New Branch
+                        Create New Branch {!isOnline && " (Online Only)"}
                       </DropdownMenuItem>
                     </>
                   )}

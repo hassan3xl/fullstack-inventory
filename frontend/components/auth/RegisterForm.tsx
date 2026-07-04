@@ -25,7 +25,24 @@ export default function RegisterForm() {
   const [otpSentEmail, setOtpSentEmail] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const {
     register,
@@ -54,6 +71,12 @@ export default function RegisterForm() {
   }, [resendTimer]);
 
   const onSendOTP = async (data: FormValues) => {
+    if (!isOnline) {
+      toast.error("Offline", {
+        description: "You must be online to create an account.",
+      });
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -90,6 +113,12 @@ export default function RegisterForm() {
   };
 
   const onRegister = async (data: FormValues) => {
+    if (!isOnline) {
+      toast.error("Offline", {
+        description: "You must be online to complete registration.",
+      });
+      return;
+    }
     const fullOtp = otpDigits.join("");
     if (fullOtp.length < 6) {
       setError("otp", {
@@ -280,7 +309,7 @@ export default function RegisterForm() {
           <Button
             type="submit"
             className="w-full mt-4"
-            disabled={isLoading}
+            disabled={isLoading || !isOnline}
             id="otp-verify-button"
           >
             {isLoading ? (
@@ -325,6 +354,17 @@ export default function RegisterForm() {
         <p className="text-muted-foreground text-sm">Join us today and get started</p>
       </div>
 
+      {/* Offline Alert Banner */}
+      {!isOnline && (
+        <div className="p-4 mb-6 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex flex-col gap-1">
+          <span className="font-semibold flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+            Sign Up Unavailable Offline
+          </span>
+          <span>Creating an account is only available online. Please check your internet connection to continue.</span>
+        </div>
+      )}
+
       {/* Sign Up Form */}
       <form onSubmit={handleSubmit(onSendOTP)} className="space-y-6">
         {/* Email Field */}
@@ -338,7 +378,7 @@ export default function RegisterForm() {
             register={register}
             type="email"
             placeholder="you@example.com"
-            disabled={isLoading}
+            disabled={isLoading || !isOnline}
             error={errors.email}
             validation={{
               required: "Email is required",
@@ -361,7 +401,7 @@ export default function RegisterForm() {
               register={register}
               type="password"
               placeholder="At least 6 characters"
-              disabled={isLoading}
+              disabled={isLoading || !isOnline}
               error={errors.password1}
               validation={{
                 required: "Password is required",
@@ -381,7 +421,7 @@ export default function RegisterForm() {
               register={register}
               type="password"
               placeholder="At least 6 characters"
-              disabled={isLoading}
+              disabled={isLoading || !isOnline}
               error={errors.password2}
               validation={{
                 required: "Confirm password is required",
@@ -422,7 +462,7 @@ export default function RegisterForm() {
         <Button
           type="submit"
           className="w-full"
-          disabled={isLoading}
+          disabled={isLoading || !isOnline}
           id="register-submit-button"
         >
           {isLoading ? (
@@ -445,7 +485,7 @@ export default function RegisterForm() {
 
       {/* Google Sign Up Button */}
       <div className="mb-6">
-        <GoogleSignInButton isLoading={isLoading} setIsLoading={setIsLoading} text="Sign up with Google" />
+        <GoogleSignInButton isLoading={isLoading} setIsLoading={setIsLoading} text="Sign up with Google" disabled={!isOnline} />
       </div>
 
       {/* Sign In Link */}

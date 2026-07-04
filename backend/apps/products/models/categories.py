@@ -62,6 +62,9 @@ class Category(TenantBaseModel):
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ['business_type', 'name']
+        indexes = [
+            models.Index(fields=['tenant', 'business_type']),
+        ]
 
     # ------------------------------------------------------------------ #
     #  Preset categories seeded via data migration                         #

@@ -27,6 +27,9 @@ class Customer(TenantBaseModel):
         db_table = "customers"
         ordering = ['-created_at']
         unique_together = ('tenant', 'phone')
+        indexes = [
+            models.Index(fields=['tenant', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.phone})"
@@ -79,6 +82,10 @@ class Sale(TenantBaseModel):
     class Meta:
         ordering = ['-created_at']
         db_table = "sales"
+        indexes = [
+            models.Index(fields=['tenant', '-created_at']),
+            models.Index(fields=['tenant', 'customer']),
+        ]
 
     def __str__(self):
         return f"{self.sale_number} ({self.total_amount})"
@@ -97,6 +104,9 @@ class SaleItem(TenantBaseModel):
 
     class Meta:
         db_table = "sale_items"
+        indexes = [
+            models.Index(fields=['tenant', 'sale']),
+        ]
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity} ({self.sell_unit})"

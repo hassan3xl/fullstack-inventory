@@ -14,25 +14,24 @@ INTERNAL_IPS = [ip[:-1] + "1" for ip in ips] + ["127.0.0.1"]
 # Load configuration from src.config
 from src.config import (
     ALLOWED_ORIGINS, 
-    ALLOWED_HOSTS, 
+    ALLOWED_HOSTS as CONFIG_HOSTS, 
     SECRET_KEY as CONFIG_SECRET_KEY,
-    PRODUCTION_DB,
-    DEVELOPMENT_DB,
     RESEND_API_KEY
 )
 
 # Use config values (SECRET_KEY from base is a default, override with env if needed)
 SECRET_KEY = CONFIG_SECRET_KEY
-ALLOWED_HOSTS = ALLOWED_HOSTS
+ALLOWED_HOSTS = list(CONFIG_HOSTS)
+for host in ["localhost", "127.0.0.1", "0.0.0.0"]:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
+        
 ALLOWED_ORIGINS = ALLOWED_ORIGINS
 USE_REDIS_CACHE = os.getenv('USE_REDIS_CACHE')
 
 
 db_url = (
-    os.environ.get("DATABASE_URL")
-    or os.environ.get("DOCKER_DB") # docker db inside docker venv
-    or os.environ.get("LOCAL_DB") # docker db on localhost
-    or os.environ.get("PRODUCTION_DB")  
+    os.environ.get("LOCAL_DB")
     or os.environ.get("TESTING_DB")
     or "sqlite:///db.sqlite3"
 )
@@ -43,8 +42,7 @@ if db_url and "neon.tech" in db_url:
 
 DATABASES = {
     "default": dj_database_url.config(
-        # default=db_url,   
-        default=os.environ.get("LOCAL_DB"),
+        default=db_url,   
         conn_max_age=600,
         ssl_require=ssl_require,
     )
