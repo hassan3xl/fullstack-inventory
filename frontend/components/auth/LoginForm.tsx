@@ -40,11 +40,11 @@ export default function LoginForm() {
       await handleLogin(
         response.user,
         response.access,
-        allowLoginMeta ?? response.user?.roles ?? null
+        allowLoginMeta ?? response.user?.roles ?? null,
       );
 
       const tenants = response.available_tenants || [];
-      
+
       if (tenants.length > 1) {
         setAvailableTenants(tenants);
         setStep("store-select");
@@ -66,7 +66,11 @@ export default function LoginForm() {
         }, 1000);
       }
     } catch (err: any) {
-      toast.error("Session configuration failed");
+      toast.error("Login failed", {
+        description:
+          getBackendErrorMessage(err) ||
+          "An error occurred while processing your login.",
+      });
       setIsLoading(false);
     }
   };
@@ -349,7 +353,10 @@ export default function LoginForm() {
 
         <div className="text-center text-sm text-muted-foreground mt-4">
           Don't have an account?{" "}
-          <Link href="/register" className="text-primary font-medium hover:underline">
+          <Link
+            href="/register"
+            className="text-primary font-medium hover:underline"
+          >
             Create an account
           </Link>
         </div>

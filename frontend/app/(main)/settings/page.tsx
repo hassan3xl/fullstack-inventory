@@ -114,12 +114,31 @@ const Switch = ({
   );
 };
 
+import { useIsOffline } from "@/lib/hooks/useIsOffline";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+
 export default function SettingsPage() {
+  const isOffline = useIsOffline();
   const { user, loading: authLoading } = useAuth();
   const permissions = user?.permissions;
   const isOwner = permissions?.is_owner || user?.role === "is_owner";
   const isAdmin = permissions?.is_admin;
   const isAuthorized = isOwner || isAdmin;
+
+  if (isOffline) {
+    return (
+      <div className="space-y-4 animate-in fade-in duration-300">
+        <Header
+          title="Store Settings"
+          subtitle="Manage your business profile and settings."
+        />
+        <OfflinePlaceholder
+          title="Store Settings is Offline"
+          description="Changing store configurations, uploading logos, or updating domain names requires an active internet connection to securely communicate with the host servers."
+        />
+      </div>
+    );
+  }
 
   const { data: store, isLoading: storeLoading } = useGetStore();
   const { config } = useBusinessConfig();

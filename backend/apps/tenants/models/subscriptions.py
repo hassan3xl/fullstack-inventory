@@ -58,6 +58,9 @@ class TenantSubscription(TenantBaseModel):
     class Meta:
         db_table = "tenant_subscriptions"
         ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=['tenant', 'active']),
+        ]
 
     def __str__(self):
         return f"{self.tenant.name} → {self.plan.name} ({'active' if self.active else 'inactive'})"

@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { Button } from "../ui/button";
-import { Menu, Search, Package, X } from "lucide-react";
+import { useSync } from "@/contexts/SyncContext";
+import { Menu, Search, Package, X, Wifi, WifiOff, Loader2 } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { AccountDropdown } from "./AccountDropdown";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
@@ -14,6 +15,7 @@ import NotificationPanel from "./NotificationPanel";
 export function Navbar() {
   const { toggleSidebar, closeSidebar, isOpen } = useSidebar();
   const { config, storeInfo } = useBusinessConfig();
+  const { isOnline, isSyncing } = useSync();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   console.log("config", config);
   console.log("storeInfo", storeInfo);
@@ -71,6 +73,25 @@ export function Navbar() {
 
             {/* RIGHT - Account & System */}
             <div className="flex items-center gap-3">
+              {/* Connection Status Badge */}
+              <div className="flex items-center">
+                {isSyncing ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-xs animate-pulse">
+                    <Loader2 size={12} className="animate-spin" />
+                    <span>Syncing</span>
+                  </div>
+                ) : !isOnline ? (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-xs">
+                    <WifiOff size={12} />
+                    <span>Offline</span>
+                  </div>
+                ) : (
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-xs">
+                    <Wifi size={12} />
+                    <span>Online</span>
+                  </div>
+                )}
+              </div>
               <CartButton />
               <NotificationButton onClick={() => setIsNotificationsOpen(true)} />
               <div className="h-6 w-px bg-border mx-1" />

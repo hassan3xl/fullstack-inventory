@@ -2,6 +2,7 @@
 import { resetAuthCookies } from "@/lib/actions/auth.actions";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiService } from "@/lib/services/apiService";
+import { useIsOffline } from "@/lib/hooks/useIsOffline";
 
 export interface User {
   id: string;
@@ -36,6 +37,7 @@ interface AuthContextType {
   isManager: boolean; // Owner, Admin, Manager
   isCashier: boolean; // Owner, Admin, Manager, Cashier
   isStaff: boolean; // Any store member (Owner, Admin, Manager, Cashier)
+  isOnline: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -50,6 +52,7 @@ const AuthContext = createContext<AuthContextType>({
   isManager: false,
   isCashier: false,
   isStaff: false,
+  isOnline: true,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -140,6 +143,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isManager = isAdmin || storeRole === "manager";
   const isCashier = isManager || storeRole === "cashier";
   const isStaff = isCashier; // Cashier or above
+  const isOffline = useIsOffline();
+  const isOnline = !isOffline;
 
   return (
     <AuthContext.Provider
@@ -155,6 +160,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isManager,
         isCashier,
         isStaff,
+        isOnline,
       }}
     >
       {children}

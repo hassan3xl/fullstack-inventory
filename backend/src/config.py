@@ -1,6 +1,6 @@
 """
-Environment configuration module for Django settings.
-Handles loading and parsing environment variables with proper defaults.
+DJANGO_ENV configuration module for Django settings.
+Handles loading and parsing DJANGO_ENV variables with proper defaults.
 """
 from dotenv import load_dotenv
 import os
@@ -11,16 +11,14 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 env_path = BASE_DIR / '.env'
 
-# 2. Load environment variables
+# 2. Load DJANGO_ENV variables
 load_dotenv(dotenv_path=env_path, override=True)
 
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()   
+DJANGO_ENV = os.getenv("DJANGO_ENV", "development").lower()   
 DJANGO_SETTINGS_MODULE = os.getenv("DJANGO_SETTINGS_MODULE")
 
 # 4. Database 
 LOCAL_DB = os.getenv("LOCAL_DB")
-SQLITE_DB = os.getenv("SQLITE_DB")
-DOCKER_DB = os.getenv("DOCKER_DB")
 PRODUCTION_DB = os.getenv("PRODUCTION_DB")
 DEVELOPMENT_DB = os.getenv("DEVELOPMENT_DB")
 
@@ -41,7 +39,7 @@ CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 # Load and parse ALLOWED_ORIGINS
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = os.getenv("DEBUG", "False")
 
 ALLOWED_HOSTS = (
     os.getenv("ALLOWED_HOSTS") or "localhost,127.0.0.1"

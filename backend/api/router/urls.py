@@ -40,6 +40,10 @@ urlpatterns = [
     # Sales & POS
     path('sales/', include('api.controllers.sales.urls')),
 
+    # Database Sync
+    path('sync/', include('api.controllers.sync.urls')),
+
     # User profile
     path('user/profile/', include('api.controllers.users.urls')),
+
 ]

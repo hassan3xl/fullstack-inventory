@@ -24,16 +24,41 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/layout/Navbar";
 import Sidebar from "@/components/layout/Sidebar";
+import { useIsOffline } from "@/lib/hooks/useIsOffline";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import Loader from "@/components/Loader";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/utils";
 
 export default function SubscriptionPage() {
+  const isOffline = useIsOffline();
   const { user, loading: authLoading } = useAuth();
   const permissions = user?.permissions;
   const isOwner = permissions?.is_owner || user?.role === "is_owner";
   const isAdmin = permissions?.is_admin;
   const isAuthorized = isOwner || isAdmin;
+
+  if (isOffline) {
+    return (
+      <div className="space-y-8 pb-12">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/50 pb-5">
+          <div>
+            <h1 className="text-xl md:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
+              Subscription Management
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Track your plan status, view feature limits, or upgrade your
+              active service.
+            </p>
+          </div>
+        </div>
+        <OfflinePlaceholder
+          title="Subscription Management is Offline"
+          description="Accessing subscription packages, updating plans, and checking payment options requires an active internet connection to securely connect to our billing system."
+        />
+      </div>
+    );
+  }
 
   const { data: store, isLoading: storeLoading } = useGetStore();
   const { data: plans, isLoading: plansLoading } = useGetSubscriptionPlans();
