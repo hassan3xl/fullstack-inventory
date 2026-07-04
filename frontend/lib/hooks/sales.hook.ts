@@ -24,11 +24,20 @@ export const useCreateSale = () => {
 
   return useMutation({
     mutationFn: salesApi.createSale,
-    onSuccess: () => {
+    onSuccess: (_, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
       queryClient.invalidateQueries({ queryKey: ["customers"] });
+      if (variables?.items && Array.isArray(variables.items)) {
+        variables.items.forEach((item: any) => {
+          if (item?.product_id) {
+            queryClient.invalidateQueries({
+              queryKey: ["product", item.product_id],
+            });
+          }
+        });
+      }
     },
   });
 };

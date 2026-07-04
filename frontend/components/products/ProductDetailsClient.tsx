@@ -33,23 +33,29 @@ import AddProductImageModal from "@/components/products/AddProductImageModal";
 import ReceiveBatchModal from "@/components/products/ReceiveBatchModal";
 import EditBatchModal from "@/components/products/EditBatchModal";
 
-const formatBatchQuantity = (qty: number, initialQty: number, baseUnit: string, packUnit: string, factor: number) => {
+const formatBatchQuantity = (
+  qty: number,
+  initialQty: number,
+  baseUnit: string,
+  packUnit: string,
+  factor: number,
+) => {
   if (factor && factor > 1) {
     const packs = Math.floor(qty / factor);
     const loose = qty % factor;
     const initPacks = Math.floor(initialQty / factor);
     const initLoose = initialQty % factor;
-    
-    let currentStr = `${packs} ${packUnit}${packs !== 1 ? 's' : ''}`;
+
+    let currentStr = `${packs} ${packUnit}${packs !== 1 ? "s" : ""}`;
     if (loose > 0) {
-      currentStr += ` & ${loose} ${baseUnit}${loose !== 1 ? 's' : ''}`;
+      currentStr += ` & ${loose} ${baseUnit}${loose !== 1 ? "s" : ""}`;
     }
-    
-    let initialStr = `${initPacks} ${packUnit}${initPacks !== 1 ? 's' : ''}`;
+
+    let initialStr = `${initPacks} ${packUnit}${initPacks !== 1 ? "s" : ""}`;
     if (initLoose > 0) {
-      initialStr += ` & ${initLoose} ${baseUnit}${initLoose !== 1 ? 's' : ''}`;
+      initialStr += ` & ${initLoose} ${baseUnit}${initLoose !== 1 ? "s" : ""}`;
     }
-    
+
     return (
       <div className="space-y-0.5">
         <span className="font-bold text-foreground">{currentStr}</span>
@@ -59,12 +65,20 @@ const formatBatchQuantity = (qty: number, initialQty: number, baseUnit: string, 
       </div>
     );
   }
-  
+
   return (
     <span>
-      {qty} <span className="text-muted-foreground text-xs">/ {initialQty} {baseUnit}s</span>
+      {qty}{" "}
+      <span className="text-muted-foreground text-xs">
+        / {initialQty} {baseUnit}s
+      </span>
     </span>
   );
+};
+
+const getBatchStatusLabel = (status?: string) => {
+  if (!status) return "Unknown";
+  return status.replace("_", " ");
 };
 
 const ProductDetailsClient = () => {
@@ -193,7 +207,11 @@ const ProductDetailsClient = () => {
     router.push(`/products/${productId}/analytics`);
   };
 
-  const stockCount = product?.stock ?? 0;
+  const batchStockFallback = product?.batches?.reduce(
+    (sum: number, batch: any) => sum + Number(batch.quantity || 0),
+    0,
+  );
+  const stockCount = Number(product?.stock ?? 0) || batchStockFallback || 0;
   const isLowStock = stockCount > 0 && stockCount <= 5;
   const isOutOfStock = stockCount === 0;
   const isActive = product?.is_active !== false;
@@ -401,10 +419,16 @@ const ProductDetailsClient = () => {
                 <div className="text-3xl font-black mb-1 text-foreground leading-tight">
                   {product.units_per_pack && product.units_per_pack > 1 ? (
                     <>
-                      {Math.floor(stockCount / product.units_per_pack)} {product.pack_unit || "Box"}{Math.floor(stockCount / product.units_per_pack) !== 1 ? "s" : ""}
+                      {Math.floor(stockCount / product.units_per_pack)}{" "}
+                      {product.pack_unit || "Box"}
+                      {Math.floor(stockCount / product.units_per_pack) !== 1
+                        ? "s"
+                        : ""}
                       {stockCount % product.units_per_pack > 0 && (
                         <span className="text-xl font-normal text-muted-foreground ml-2">
-                          & {stockCount % product.units_per_pack} {product.base_unit || "Piece"}{stockCount % product.units_per_pack !== 1 ? "s" : ""}
+                          & {stockCount % product.units_per_pack}{" "}
+                          {product.base_unit || "Piece"}
+                          {stockCount % product.units_per_pack !== 1 ? "s" : ""}
                         </span>
                       )}
                     </>
@@ -413,7 +437,8 @@ const ProductDetailsClient = () => {
                   )}
                 </div>
                 <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                  Total: {stockCount} {product.base_unit || "Piece"}{stockCount !== 1 ? "s" : ""} available
+                  Total: {stockCount} {product.base_unit || "Piece"}
+                  {stockCount !== 1 ? "s" : ""} available
                 </p>
 
                 <div className="mt-4 pt-4 border-t border-border">
@@ -503,7 +528,7 @@ const ProductDetailsClient = () => {
                                   : "bg-muted text-muted-foreground border border-border"
                         }`}
                       >
-                        {batch.status.replace("_", " ")}
+                        {getBatchStatusLabel(batch?.status)}
                       </span>
                     </div>
 
@@ -519,7 +544,7 @@ const ProductDetailsClient = () => {
                             batch.initial_quantity,
                             product.base_unit || "Piece",
                             product.pack_unit || "Box",
-                            product.units_per_pack || 1
+                            product.units_per_pack || 1,
                           )}
                         </div>
                       </div>
@@ -613,7 +638,11 @@ const ProductDetailsClient = () => {
                     <tr className="bg-muted/50 border-b border-border/50 text-[10px] uppercase font-black tracking-wider text-muted-foreground">
                       <th className="px-6 py-4">Batch Number</th>
                       <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">{product.units_per_pack && product.units_per_pack > 1 ? `${product.pack_unit}s & ${product.base_unit}s` : "Quantity"}</th>
+                      <th className="px-6 py-4">
+                        {product.units_per_pack && product.units_per_pack > 1
+                          ? `${product.pack_unit}s & ${product.base_unit}s`
+                          : "Quantity"}
+                      </th>
                       <th className="px-6 py-4">Production Date</th>
                       <th className="px-6 py-4">Expiry Date</th>
                       <th className="px-6 py-4">Days Left</th>
@@ -634,7 +663,7 @@ const ProductDetailsClient = () => {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black capitalize ${
-                              batch.status === "fresh"
+                              batch?.status === "fresh"
                                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                 : batch.status === "near_expiry"
                                   ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
@@ -645,7 +674,7 @@ const ProductDetailsClient = () => {
                                       : "bg-muted text-muted-foreground border border-border"
                             }`}
                           >
-                            {batch.status.replace("_", " ")}
+                            {getBatchStatusLabel(batch?.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 font-semibold text-sm">
@@ -654,7 +683,7 @@ const ProductDetailsClient = () => {
                             batch.initial_quantity,
                             product.base_unit || "Piece",
                             product.pack_unit || "Box",
-                            product.units_per_pack || 1
+                            product.units_per_pack || 1,
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">

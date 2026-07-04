@@ -72,7 +72,11 @@ const ProductCard = ({ product, merchantView = false }: ProductCardProps) => {
       : "/default_product.png";
 
   // Stock status
-  const stockCount = product.stock ?? 0;
+  const batchStockFallback = product.batches?.reduce(
+    (sum, batch) => sum + Number(batch.quantity || 0),
+    0,
+  );
+  const stockCount = Number(product.stock ?? 0) || batchStockFallback || 0;
   const isLowStock = stockCount > 0 && stockCount <= 5;
   const isOutOfStock = stockCount === 0;
 

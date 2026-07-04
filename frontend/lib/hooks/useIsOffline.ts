@@ -18,7 +18,7 @@ class NetworkStatusTracker {
 
     window.addEventListener("online", updateStatus);
     window.addEventListener("offline", updateStatus);
-    
+
     // Start heartbeat check
     this.checkStatus();
     // Periodically ping to verify connection stability
@@ -40,7 +40,7 @@ class NetworkStatusTracker {
   public setOffline(offline: boolean) {
     if (this.isOffline !== offline) {
       this.isOffline = offline;
-      this.listeners.forEach(l => l(offline));
+      this.listeners.forEach((l) => l(offline));
     }
   }
 
@@ -53,13 +53,18 @@ class NetworkStatusTracker {
       return;
     }
 
-    // Ping backend API root to double check real connection status (Scenario B)
+    // Ping backend health endpoint to verify real connection status (Scenario B)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-      const pingUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL ||
+        (typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost:8000");
+      const pingUrl = `${baseUrl.replace(/\/$/, "")}/health/`;
+      console.log(pingUrl);
       await fetch(pingUrl, {
         method: "GET",
         signal: controller.signal,
@@ -74,7 +79,8 @@ class NetworkStatusTracker {
   }
 }
 
-const tracker = typeof window !== "undefined" ? new NetworkStatusTracker() : null;
+const tracker =
+  typeof window !== "undefined" ? new NetworkStatusTracker() : null;
 
 export function useIsOffline() {
   const [isOffline, setIsOffline] = useState(false);
@@ -101,4 +107,3 @@ export function setGlobalOffline(offline: boolean) {
     }
   }
 }
-

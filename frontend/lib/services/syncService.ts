@@ -161,6 +161,17 @@ class SyncService {
 
       localStorage.setItem(storageKey, server_timestamp);
       this.consecutiveFailures = 0;
+
+      // Invalidate React Query cache to trigger UI refresh with newly synced data
+      try {
+        const { getGlobalQueryClient } = require("@/providers/QueryProviders");
+        const queryClient = getGlobalQueryClient();
+        if (queryClient) {
+          queryClient.invalidateQueries();
+        }
+      } catch (err) {
+        console.error("Failed to invalidate queries after sync pull", err);
+      }
     } catch (error) {
       console.error("Sync pull failed:", error);
       this.handleSyncFailure(error);

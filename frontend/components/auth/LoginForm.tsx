@@ -7,6 +7,7 @@ import { Key, Mail, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { handleLogin, setActiveTenantCookie } from "@/lib/actions/auth.actions";
 import { apiService, getBackendErrorMessage } from "@/lib/services/apiService";
+import { syncService } from "@/lib/services/syncService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import GoogleSignInButton from "./GoogleSignInButton";
@@ -43,6 +44,12 @@ export default function LoginForm() {
         allowLoginMeta ?? response.user?.roles ?? null,
       );
 
+      // Instantly set access token and user in client cookies to avoid race conditions
+      if (typeof window !== "undefined") {
+        document.cookie = `session_access_token=${encodeURIComponent(response.access)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        document.cookie = `session_user=${encodeURIComponent(JSON.stringify(response.user))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      }
+
       const tenants = response.available_tenants || [];
 
       if (tenants.length > 1) {
@@ -55,7 +62,25 @@ export default function LoginForm() {
         });
         const hasTenants = tenants.length > 0;
         if (hasTenants) {
-          await setActiveTenantCookie(tenants[0].id);
+          const tenantId = tenants[0].id;
+          await setActiveTenantCookie(tenantId);
+          if (typeof window !== "undefined") {
+            document.cookie = `active_tenant_id=${encodeURIComponent(tenantId)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          }
+
+          // Eager preload catalog before redirecting
+          try {
+            toast.info("Syncing store catalog...", {
+              description: "Eagerly preloading products and categories for offline use...",
+            });
+            await syncService.syncAll();
+            toast.success("Catalog synced!", {
+              description: "Database is ready for offline use.",
+            });
+          } catch (syncErr) {
+            console.error("Eager sync failed during login:", syncErr);
+            toast.error("Failed to preload catalog for offline use. Proceeding online.");
+          }
         }
         setTimeout(() => {
           if (!hasTenants && response.user?.role !== "platform_admin") {
@@ -79,6 +104,24 @@ export default function LoginForm() {
     setSelectingTenant(tenantId);
     try {
       await setActiveTenantCookie(tenantId);
+      if (typeof window !== "undefined") {
+        document.cookie = `active_tenant_id=${encodeURIComponent(tenantId)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      }
+
+      // Eager preload catalog before redirecting
+      try {
+        toast.info("Syncing store catalog...", {
+          description: "Eagerly preloading products and categories for offline use...",
+        });
+        await syncService.syncAll();
+        toast.success("Catalog synced!", {
+          description: "Database is ready for offline use.",
+        });
+      } catch (syncErr) {
+        console.error("Eager sync failed during store selection:", syncErr);
+        toast.error("Failed to preload catalog for offline use. Proceeding online.");
+      }
+
       toast.success("Store selected! Redirecting...", {
         description: "Loading your dashboard catalog.",
       });

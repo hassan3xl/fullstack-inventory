@@ -15,6 +15,57 @@ function getOfflineUser(): any {
   }
 }
 
+function parseExpiryDate(expiryDate: unknown): Date | null {
+  if (!expiryDate) return null;
+  if (expiryDate instanceof Date) return expiryDate;
+  if (typeof expiryDate === "string") {
+    const dateString = expiryDate.split("T")[0];
+    const parsed = new Date(dateString);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+function getDaysUntilExpiry(expiryDate: unknown): number | null {
+  const parsed = parseExpiryDate(expiryDate);
+  if (!parsed) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(parsed);
+  expiry.setHours(0, 0, 0, 0);
+  const diff = expiry.getTime() - today.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function getBatchStatus(
+  expiryDate: unknown,
+): "fresh" | "near_expiry" | "critical" | "expired" | "no_expiry" {
+  const days = getDaysUntilExpiry(expiryDate);
+  if (days === null) return "no_expiry";
+  if (days < 0) return "expired";
+  if (days <= 7) return "critical";
+  if (days <= 30) return "near_expiry";
+  return "fresh";
+}
+
+function normalizeBatch(batch: any) {
+  const quantity = Number(batch.quantity || 0);
+  const initial_quantity =
+    batch.initial_quantity !== undefined
+      ? Number(batch.initial_quantity)
+      : quantity;
+  return {
+    ...batch,
+    quantity,
+    initial_quantity,
+    status: batch.status || getBatchStatus(batch.expiry_date),
+    days_until_expiry:
+      batch.days_until_expiry !== undefined && batch.days_until_expiry !== null
+        ? Number(batch.days_until_expiry)
+        : getDaysUntilExpiry(batch.expiry_date),
+  };
+}
+
 class OfflineInterceptor {
   get db(): QStackDatabase {
     const tenantId = getActiveTenantId();
@@ -35,7 +86,9 @@ class OfflineInterceptor {
     if (normalizedUrl === "/business/profile/") {
       const tenantId = getActiveTenantId();
       if (tenantId) {
-        const cached = localStorage.getItem(`qstack_business_profile_${tenantId}`);
+        const cached = localStorage.getItem(
+          `qstack_business_profile_${tenantId}`,
+        );
         if (cached) {
           try {
             return JSON.parse(cached);
@@ -59,10 +112,12 @@ class OfflineInterceptor {
       if (normalizedUrl.includes("/stats/")) {
         const products = await db.products.toArray();
         const sales = await db.sales.toArray();
-        
+
         const now = new Date();
         const todayStr = now.toISOString().split("T")[0];
-        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const thirtyDaysFromNow = new Date(
+          now.getTime() + 30 * 24 * 60 * 60 * 1000,
+        );
         const thirtyDaysStr = thirtyDaysFromNow.toISOString().split("T")[0];
 
         let totalValue = 0;
@@ -72,7 +127,7 @@ class OfflineInterceptor {
         let expiredCount = 0;
         let nearExpiryCount = 0;
 
-        products.forEach(p => {
+        products.forEach((p) => {
           const stock = p.stock || 0;
           const unitPrice = Number(p.unit_price || 0);
           totalValue += stock * unitPrice;
@@ -87,7 +142,10 @@ class OfflineInterceptor {
           if (p.expiry_date) {
             if (p.expiry_date < todayStr) {
               expiredCount++;
-            } else if (p.expiry_date >= todayStr && p.expiry_date <= thirtyDaysStr) {
+            } else if (
+              p.expiry_date >= todayStr &&
+              p.expiry_date <= thirtyDaysStr
+            ) {
               nearExpiryCount++;
             }
           }
@@ -107,43 +165,70 @@ class OfflineInterceptor {
           total_sales_today: sales.length,
         };
       }
-      
+
       // Check for single product detail: /inventory/products/{uuid}/
-      const match = normalizedUrl.match(/\/inventory\/products\/([a-fA-F0-9-]{36})\//);
+      const match = normalizedUrl.match(
+        /\/inventory\/products\/([a-fA-F0-9-]{36})\//,
+      );
       if (match) {
         const productId = match[1];
         const product = await db.products.get(productId);
         if (!product) throw new Error("Product not found locally");
-        
-        const category = product.category_id ? await db.categories.get(product.category_id) : null;
-        const batches = await db.stockBatches.where("product_id").equals(productId).toArray();
-        const inventory = await db.productInventories.where("product_id").equals(productId).first();
-        
+
+        const category = product.category_id
+          ? await db.categories.get(product.category_id)
+          : null;
+        const rawBatches = await db.stockBatches
+          .where("product_id")
+          .equals(productId)
+          .toArray();
+        const batches = rawBatches.map(normalizeBatch);
+        const inventory = await db.productInventories
+          .where("product_id")
+          .equals(productId)
+          .first();
+        const computedStock = batches.reduce(
+          (sum, batch) => sum + Number(batch.quantity || 0),
+          0,
+        );
+
         return {
           ...product,
           category: category || null,
-          images: product.image ? [{ id: "primary", image: product.image, is_primary: true }] : [],
+          images: product.image
+            ? [{ id: "primary", image: product.image, is_primary: true }]
+            : [],
           batches: batches,
-          inventory: inventory || null
+          inventory: inventory || null,
+          stock: Number(product.stock || 0) || computedStock,
         };
       }
 
       // Default to product list querying
       let products = await db.products.toArray();
       const categories = await db.categories.toArray();
-      const categoryMap = new Map(categories.map(c => [c.id, c]));
-      const batches = await db.stockBatches.toArray();
+      const categoryMap = new Map(categories.map((c) => [c.id, c]));
+      const rawBatches = await db.stockBatches.toArray();
       const inventories = await db.productInventories.toArray();
 
-      let enrichedProducts = products.map(p => {
-        const prodBatches = batches.filter(b => b.product_id === p.id);
-        const prodInventory = inventories.find(i => i.product_id === p.id);
+      let enrichedProducts = products.map((p) => {
+        const prodBatches = rawBatches
+          .filter((b) => b.product_id === p.id)
+          .map(normalizeBatch);
+        const batchStock = prodBatches.reduce(
+          (sum, batch) => sum + Number(batch.quantity || 0),
+          0,
+        );
+        const prodInventory = inventories.find((i) => i.product_id === p.id);
         return {
           ...p,
           category: p.category_id ? categoryMap.get(p.category_id) : null,
-          images: p.image ? [{ id: "primary", image: p.image, is_primary: true }] : [],
+          images: p.image
+            ? [{ id: "primary", image: p.image, is_primary: true }]
+            : [],
           batches: prodBatches,
-          inventory: prodInventory || null
+          inventory: prodInventory || null,
+          stock: Number(p.stock || 0) || batchStock,
         };
       });
 
@@ -152,19 +237,23 @@ class OfflineInterceptor {
       if (search) {
         const term = String(search).toLowerCase();
         enrichedProducts = enrichedProducts.filter(
-          p => p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term)
+          (p) =>
+            p.name.toLowerCase().includes(term) ||
+            p.sku.toLowerCase().includes(term),
         );
       }
 
       // Apply Category filter
       const category = params?.category;
       if (category) {
-        enrichedProducts = enrichedProducts.filter(p => p.category_id === category || p.category?.name === category);
+        enrichedProducts = enrichedProducts.filter(
+          (p) => p.category_id === category || p.category?.name === category,
+        );
       }
 
       // Apply active status
       if (params?.active_status === "active") {
-        enrichedProducts = enrichedProducts.filter(p => p.is_active);
+        enrichedProducts = enrichedProducts.filter((p) => p.is_active);
       }
 
       // Mock Pagination
@@ -179,9 +268,12 @@ class OfflineInterceptor {
 
       return {
         count: enrichedProducts.length,
-        next: start + pageSize < enrichedProducts.length ? `?page=${page + 1}` : null,
+        next:
+          start + pageSize < enrichedProducts.length
+            ? `?page=${page + 1}`
+            : null,
         previous: page > 1 ? `?page=${page - 1}` : null,
-        results: paginatedResults
+        results: paginatedResults,
       };
     }
 
@@ -192,7 +284,9 @@ class OfflineInterceptor {
       if (search) {
         const term = String(search).toLowerCase();
         customers = customers.filter(
-          c => c.name.toLowerCase().includes(term) || (c.phone ? c.phone.includes(term) : false)
+          (c) =>
+            c.name.toLowerCase().includes(term) ||
+            (c.phone ? c.phone.includes(term) : false),
         );
       }
       return customers;
@@ -205,7 +299,10 @@ class OfflineInterceptor {
         const saleId = match[1];
         const sale = await db.sales.get(saleId);
         if (!sale) throw new Error("Sale not found locally");
-        const items = await db.saleItems.where("sale_id").equals(saleId).toArray();
+        const items = await db.saleItems
+          .where("sale_id")
+          .equals(saleId)
+          .toArray();
         return { ...sale, items };
       }
 
@@ -223,10 +320,20 @@ class OfflineInterceptor {
     const timestamp = new Date().toISOString();
     const normalizedUrl = url.replace(/^\/api/, "");
 
+    if (
+      normalizedUrl === "/inventory/products/categories/" ||
+      normalizedUrl.startsWith("/inventory/products/categories/")
+    ) {
+      throw new Error("Category changes are read-only in offline mode.");
+    }
+
     // 1. Create Sale (POS Checkout)
     if (normalizedUrl === "/sales/" && method === "POST") {
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-      const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const randomStr = Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase();
       const saleNumber = `REC-${dateStr}-${randomStr}`;
 
       let calculatedSubtotal = 0;
@@ -240,12 +347,20 @@ class OfflineInterceptor {
             let unitPrice = Number(product.unit_price || 0);
 
             // multiplier for packs
-            const multiplier = (item.sell_unit === "pack" && (product as any).units_per_pack) ? (product as any).units_per_pack : 1;
+            const multiplier =
+              item.sell_unit === "pack" && (product as any).units_per_pack
+                ? (product as any).units_per_pack
+                : 1;
 
             // Resolve capacity-based price
             if (item.capacity && product.capacities) {
               for (const cap of product.capacities) {
-                if (typeof cap === "object" && cap && cap.name === item.capacity && cap.price) {
+                if (
+                  typeof cap === "object" &&
+                  cap &&
+                  cap.name === item.capacity &&
+                  cap.price
+                ) {
                   unitPrice = Number(cap.price);
                   break;
                 }
@@ -272,20 +387,28 @@ class OfflineInterceptor {
               sell_unit: item.sell_unit || "loose",
               variant: item.variant || null,
               capacity: item.capacity || null,
-              deleted: 0
+              deleted: 0,
             };
-            await syncService.registerMutation("saleItems", "create", itemId, itemPayload);
+            await syncService.registerMutation(
+              "saleItems",
+              "create",
+              itemId,
+              itemPayload,
+            );
 
             saleItemsPayload.push({
               ...itemPayload,
-              product_name: product.name
+              product_name: product.name,
             });
 
             // Deduct product stock in IndexedDB
             const newStock = Math.max(0, (product.stock || 0) - item.quantity);
-            
+
             // Also deduct from batches (FEFO order)
-            const prodBatches = await db.stockBatches.where("product_id").equals(item.product_id).toArray();
+            const prodBatches = await db.stockBatches
+              .where("product_id")
+              .equals(item.product_id)
+              .toArray();
             // Sort FEFO: non-null expiry dates first (ascending), null expiry dates last
             prodBatches.sort((a, b) => {
               if (!a.expiry_date) return 1;
@@ -301,13 +424,13 @@ class OfflineInterceptor {
                 const deducted = Math.min(batchQty, remainingToDeduct);
                 const newBatchQty = batchQty - deducted;
                 remainingToDeduct -= deducted;
-                
+
                 await db.stockBatches.put({
                   ...batch,
                   quantity: newBatchQty,
-                  updated_at: new Date().toISOString()
+                  updated_at: new Date().toISOString(),
                 });
-                
+
                 // Register mutation for batch update
                 await db.outbox.add({
                   action: "update",
@@ -315,7 +438,7 @@ class OfflineInterceptor {
                   record_id: batch.id,
                   payload: { quantity: newBatchQty },
                   timestamp: Date.now(),
-                  tenant_id: tenantId
+                  tenant_id: tenantId,
                 });
               }
             }
@@ -323,7 +446,7 @@ class OfflineInterceptor {
             await db.products.put({
               ...product,
               stock: newStock,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             });
 
             // Register mutation for product update
@@ -333,7 +456,7 @@ class OfflineInterceptor {
               record_id: product.id,
               payload: { stock: newStock },
               timestamp: Date.now(),
-              tenant_id: tenantId
+              tenant_id: tenantId,
             });
           }
         }
@@ -345,7 +468,10 @@ class OfflineInterceptor {
 
       // Get Cashier Details
       const user = getOfflineUser();
-      const cashierName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email : "System";
+      const cashierName = user
+        ? `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
+          user.email
+        : "System";
       const cashierEmail = user ? user.email : "system@qstack.com";
 
       // Get Customer Details
@@ -357,7 +483,7 @@ class OfflineInterceptor {
             id: customer.id,
             name: customer.name,
             phone: customer.phone || "",
-            email: customer.email || ""
+            email: customer.email || "",
           };
         }
       } else if (data.customer_name && data.customer_phone) {
@@ -365,7 +491,7 @@ class OfflineInterceptor {
           id: uuidv4(),
           name: data.customer_name,
           phone: data.customer_phone,
-          email: ""
+          email: "",
         };
       }
 
@@ -380,11 +506,16 @@ class OfflineInterceptor {
         customer_id: customerPayload?.id || null,
         created_at: timestamp,
         updated_at: timestamp,
-        deleted: 0
+        deleted: 0,
       };
 
       // Register the main sale creation mutation
-      await syncService.registerMutation("sales", "create", recordId, dbPayload);
+      await syncService.registerMutation(
+        "sales",
+        "create",
+        recordId,
+        dbPayload,
+      );
 
       return {
         ...dbPayload,
@@ -392,12 +523,15 @@ class OfflineInterceptor {
         customer: customerPayload,
         cashier_name: cashierName,
         cashier_email: cashierEmail,
-        items: saleItemsPayload
+        items: saleItemsPayload,
       };
     }
 
     // 2. Add Category
-    if (normalizedUrl === "/inventory/products/categories/" && method === "POST") {
+    if (
+      normalizedUrl === "/inventory/products/categories/" &&
+      method === "POST"
+    ) {
       const categoryPayload = {
         id: recordId,
         name: data.name,
@@ -407,25 +541,44 @@ class OfflineInterceptor {
         expiry_strategy: data.expiry_strategy || "GENERAL",
         created_at: timestamp,
         updated_at: timestamp,
-        deleted: 0
+        deleted: 0,
       };
-      await syncService.registerMutation("categories", "create", recordId, categoryPayload);
+      await syncService.registerMutation(
+        "categories",
+        "create",
+        recordId,
+        categoryPayload,
+      );
       return categoryPayload;
     }
 
     // 3. Edit Category
-    const categoryEditMatch = normalizedUrl.match(/\/inventory\/products\/categories\/([a-fA-F0-9-]{36})\//);
+    const categoryEditMatch = normalizedUrl.match(
+      /\/inventory\/products\/categories\/([a-fA-F0-9-]{36})\//,
+    );
     if (categoryEditMatch && (method === "PATCH" || method === "PUT")) {
       const categoryId = categoryEditMatch[1];
-      await syncService.registerMutation("categories", "update", categoryId, data);
+      await syncService.registerMutation(
+        "categories",
+        "update",
+        categoryId,
+        data,
+      );
       return { id: categoryId, ...data };
     }
 
     // 4. Delete Category
-    const categoryDeleteMatch = normalizedUrl.match(/\/inventory\/products\/categories\/([a-fA-F0-9-]{36})\//);
+    const categoryDeleteMatch = normalizedUrl.match(
+      /\/inventory\/products\/categories\/([a-fA-F0-9-]{36})\//,
+    );
     if (categoryDeleteMatch && method === "DELETE") {
       const categoryId = categoryDeleteMatch[1];
-      await syncService.registerMutation("categories", "delete", categoryId, null);
+      await syncService.registerMutation(
+        "categories",
+        "delete",
+        categoryId,
+        null,
+      );
       return { detail: "Deleted successfully" };
     }
 
@@ -446,14 +599,21 @@ class OfflineInterceptor {
         is_active: data.is_active !== false,
         created_at: timestamp,
         updated_at: timestamp,
-        deleted: 0
+        deleted: 0,
       };
-      await syncService.registerMutation("products", "create", recordId, productPayload);
+      await syncService.registerMutation(
+        "products",
+        "create",
+        recordId,
+        productPayload,
+      );
       return productPayload;
     }
 
     // 6. Edit Product
-    const productEditMatch = normalizedUrl.match(/\/inventory\/products\/([a-fA-F0-9-]{36})\//);
+    const productEditMatch = normalizedUrl.match(
+      /\/inventory\/products\/([a-fA-F0-9-]{36})\//,
+    );
     if (productEditMatch && (method === "PATCH" || method === "PUT")) {
       const productId = productEditMatch[1];
       await syncService.registerMutation("products", "update", productId, data);
@@ -461,7 +621,9 @@ class OfflineInterceptor {
     }
 
     // 7. Delete Product
-    const productDeleteMatch = normalizedUrl.match(/\/inventory\/products\/([a-fA-F0-9-]{36})\//);
+    const productDeleteMatch = normalizedUrl.match(
+      /\/inventory\/products\/([a-fA-F0-9-]{36})\//,
+    );
     if (productDeleteMatch && method === "DELETE") {
       const productId = productDeleteMatch[1];
       await syncService.registerMutation("products", "delete", productId, null);
@@ -477,44 +639,64 @@ class OfflineInterceptor {
         email: data.email || "",
         created_at: timestamp,
         updated_at: timestamp,
-        deleted: 0
+        deleted: 0,
       };
-      await syncService.registerMutation("customers", "create", recordId, customerPayload);
+      await syncService.registerMutation(
+        "customers",
+        "create",
+        recordId,
+        customerPayload,
+      );
       return customerPayload;
     }
 
     // 9. Add Stock Batch
-    const batchAddMatch = normalizedUrl.match(/\/inventory\/products\/([a-fA-F0-9-]{36})\/batches\//);
+    const batchAddMatch = normalizedUrl.match(
+      /\/inventory\/products\/([a-fA-F0-9-]{36})\/batches\//,
+    );
     if (batchAddMatch && method === "POST") {
       const productId = batchAddMatch[1];
       const batchPayload = {
         id: recordId,
         product_id: productId,
-        batch_number: data.batch_number || `LOT-${new Date().toISOString().slice(0, 10)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        batch_number:
+          data.batch_number ||
+          `LOT-${new Date().toISOString().slice(0, 10)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
         quantity: Number(data.quantity || 0),
         initial_quantity: Number(data.quantity || 0),
         production_date: data.production_date || null,
         expiry_date: data.expiry_date || null,
         created_at: timestamp,
         updated_at: timestamp,
-        deleted: 0
+        deleted: 0,
       };
 
-      await syncService.registerMutation("stockBatches", "create", recordId, batchPayload);
+      await syncService.registerMutation(
+        "stockBatches",
+        "create",
+        recordId,
+        batchPayload,
+      );
 
       // Update product stock and earliest expiry/production dates
       const product = await db.products.get(productId);
       if (product) {
         const newStock = (product.stock || 0) + batchPayload.quantity;
         const updatePayload: Record<string, any> = { stock: newStock };
-        
+
         if (batchPayload.expiry_date) {
-          if (!product.expiry_date || batchPayload.expiry_date < product.expiry_date) {
+          if (
+            !product.expiry_date ||
+            batchPayload.expiry_date < product.expiry_date
+          ) {
             updatePayload.expiry_date = batchPayload.expiry_date;
           }
         }
         if (batchPayload.production_date) {
-          if (!product.production_date || batchPayload.production_date < product.production_date) {
+          if (
+            !product.production_date ||
+            batchPayload.production_date < product.production_date
+          ) {
             updatePayload.production_date = batchPayload.production_date;
           }
         }
@@ -522,7 +704,7 @@ class OfflineInterceptor {
         await db.products.put({
           ...product,
           ...updatePayload,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
 
         // Register mutation for product update
@@ -532,7 +714,7 @@ class OfflineInterceptor {
           record_id: productId,
           payload: updatePayload,
           timestamp: Date.now(),
-          tenant_id: tenantId
+          tenant_id: tenantId,
         });
       }
 
@@ -540,36 +722,44 @@ class OfflineInterceptor {
     }
 
     // 10. Edit Stock Batch
-    const batchEditMatch = normalizedUrl.match(/\/inventory\/products\/([a-fA-F0-9-]{36})\/batches\/([a-fA-F0-9-]{36})\//);
+    const batchEditMatch = normalizedUrl.match(
+      /\/inventory\/products\/([a-fA-F0-9-]{36})\/batches\/([a-fA-F0-9-]{36})\//,
+    );
     if (batchEditMatch && (method === "PATCH" || method === "PUT")) {
       const productId = batchEditMatch[1];
       const batchId = batchEditMatch[2];
-      
+
       const oldBatch = await db.stockBatches.get(batchId);
-      const oldQty = oldBatch ? (oldBatch.quantity || 0) : 0;
-      
+      const oldQty = oldBatch ? oldBatch.quantity || 0 : 0;
+
       const updatedBatch = {
         ...oldBatch,
         ...data,
-        updated_at: timestamp
+        updated_at: timestamp,
       };
 
-      await syncService.registerMutation("stockBatches", "update", batchId, data);
+      await syncService.registerMutation(
+        "stockBatches",
+        "update",
+        batchId,
+        data,
+      );
 
       // Recalculate product stock
       const product = await db.products.get(productId);
       if (product) {
         const qtyDiff = Number(data.quantity || 0) - oldQty;
         const newStock = Math.max(0, (product.stock || 0) + qtyDiff);
-        
+
         const updatePayload: Record<string, any> = { stock: newStock };
         if (data.expiry_date) updatePayload.expiry_date = data.expiry_date;
-        if (data.production_date) updatePayload.production_date = data.production_date;
+        if (data.production_date)
+          updatePayload.production_date = data.production_date;
 
         await db.products.put({
           ...product,
           ...updatePayload,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
 
         // Register product update mutation
@@ -579,7 +769,7 @@ class OfflineInterceptor {
           record_id: productId,
           payload: updatePayload,
           timestamp: Date.now(),
-          tenant_id: tenantId
+          tenant_id: tenantId,
         });
       }
 
@@ -592,19 +782,24 @@ class OfflineInterceptor {
       const batchId = batchEditMatch[2];
 
       const oldBatch = await db.stockBatches.get(batchId);
-      const oldQty = oldBatch ? (oldBatch.quantity || 0) : 0;
+      const oldQty = oldBatch ? oldBatch.quantity || 0 : 0;
 
-      await syncService.registerMutation("stockBatches", "delete", batchId, null);
+      await syncService.registerMutation(
+        "stockBatches",
+        "delete",
+        batchId,
+        null,
+      );
 
       // Recalculate product stock
       const product = await db.products.get(productId);
       if (product) {
         const newStock = Math.max(0, (product.stock || 0) - oldQty);
-        
+
         await db.products.put({
           ...product,
           stock: newStock,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
 
         // Register product update mutation
@@ -614,14 +809,16 @@ class OfflineInterceptor {
           record_id: productId,
           payload: { stock: newStock },
           timestamp: Date.now(),
-          tenant_id: tenantId
+          tenant_id: tenantId,
         });
       }
 
       return { detail: "Deleted successfully" };
     }
 
-    throw new Error(`Offline write handler not implemented for ${method} URL: ${url}`);
+    throw new Error(
+      `Offline write handler not implemented for ${method} URL: ${url}`,
+    );
   }
 }
 

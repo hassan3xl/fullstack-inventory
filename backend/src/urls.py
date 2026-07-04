@@ -10,6 +10,13 @@ import requests
 from apps.products import views
 
 
+def health_check(request):
+    return JsonResponse({
+        "status": "ok",
+        "message": "Backend service is available.",
+    })
+
+
 def ping_self():
     # Wait for Django to start up completely before sending the first request
     time.sleep(15)
@@ -43,6 +50,7 @@ if should_start_ping():
 urlpatterns = [
     # ping the backend to check if it's alive every 5 minutes
     # path('ping/', ping_self, name='ping'),
+    path('api/health/', health_check, name='api-health'),
     path('admin/', admin.site.urls),
     path('api/', include('api.router.urls')),
 
