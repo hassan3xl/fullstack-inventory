@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { formatNaira } from "@/lib/utils";
+import { formatNaira, formatPriceWithCommas, parsePriceFromFormatted } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useGetDebts,
@@ -26,6 +26,8 @@ import {
 } from "@/lib/hooks/finance.hook";
 import { useGetCustomers } from "@/lib/hooks/sales.hook";
 import { DebtData, ExpenseData } from "@/lib/api/finance.api";
+import { NormalInput, NormalSelect } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Wallet,
   TrendingDown,
@@ -52,8 +54,10 @@ export default function LedgerPage() {
   // Search & Filter state
   const [debtSearch, setDebtSearch] = useState("");
   const [debtFilter, setDebtFilter] = useState<string>("all");
+  const [debtDateFilter, setDebtDateFilter] = useState<"all" | "today" | "week" | "month" | "30days">("all");
   const [expenseSearch, setExpenseSearch] = useState("");
   const [expenseFilter, setExpenseFilter] = useState<string>("all");
+  const [expenseDateFilter, setExpenseDateFilter] = useState<"all" | "today" | "week" | "month" | "30days">("all");
 
   // Debts & Expenses Queries
   const { data: debts = [], isLoading: loadingDebts } = useGetDebts();
@@ -132,6 +136,39 @@ export default function LedgerPage() {
     return { owedToUs, owedByUs, totalPaid };
   }, [debts]);
 
+  const isWithinDateRange = (dateStr: string | null | undefined, range: "all" | "today" | "week" | "month" | "30days") => {
+    if (range === "all") return true;
+    if (!dateStr) return false;
+    
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return false;
+    const now = new Date();
+    
+    // Set to local start of day for accurate comparison
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    if (range === "today") {
+      const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      return compareDate.getTime() === startOfToday.getTime();
+    }
+    
+    if (range === "week") {
+      const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return date >= sevenDaysAgo;
+    }
+    
+    if (range === "month") {
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+    }
+    
+    if (range === "30days") {
+      const thirtyDaysAgo = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return date >= thirtyDaysAgo;
+    }
+    
+    return true;
+  };
+
   const filteredDebts = useMemo(() => {
     return debts.filter((d) => {
       const matchesSearch = d.debtor_creditor_name
@@ -139,13 +176,16 @@ export default function LedgerPage() {
         .includes(debtSearch.toLowerCase());
       if (!matchesSearch) return false;
 
+      // Filter by date range (created_at)
+      if (!isWithinDateRange(d.created_at, debtDateFilter)) return false;
+
       if (debtFilter === "all") return true;
       if (debtFilter === "owed_to_us" || debtFilter === "owed_by_us") {
         return d.debt_type === debtFilter;
       }
       return d.status === debtFilter;
     });
-  }, [debts, debtSearch, debtFilter]);
+  }, [debts, debtSearch, debtFilter, debtDateFilter]);
 
   // Expenses Computations
   const expenseStats = useMemo(() => {
@@ -168,10 +208,13 @@ export default function LedgerPage() {
         .includes(expenseSearch.toLowerCase());
       if (!matchesSearch) return false;
 
+      // Filter by date range (expense_date)
+      if (!isWithinDateRange(e.expense_date, expenseDateFilter)) return false;
+
       if (expenseFilter === "all") return true;
       return e.category === expenseFilter;
     });
-  }, [expenses, expenseSearch, expenseFilter]);
+  }, [expenses, expenseSearch, expenseFilter, expenseDateFilter]);
 
   // Handlers for Debt modal
   const openAddDebt = () => {
@@ -193,7 +236,7 @@ export default function LedgerPage() {
       debt_type: debt.debt_type,
       customer_id: debt.customer?.id || "",
       debtor_creditor_name: debt.debtor_creditor_name,
-      amount: String(debt.amount),
+      amount: formatPriceWithCommas(debt.amount),
       description: debt.description || "",
       due_date: debt.due_date || "",
     });
@@ -206,7 +249,7 @@ export default function LedgerPage() {
       toast.error("Please enter a name or select a customer.");
       return;
     }
-    const amt = parseFloat(debtForm.amount);
+    const amt = parseFloat(parsePriceFromFormatted(debtForm.amount));
     if (isNaN(amt) || amt <= 0) {
       toast.error("Please enter a valid amount.");
       return;
@@ -249,7 +292,7 @@ export default function LedgerPage() {
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentDebt || !paymentDebt.id) return;
-    const payAmt = parseFloat(paymentAmount);
+    const payAmt = parseFloat(parsePriceFromFormatted(paymentAmount));
     if (isNaN(payAmt) || payAmt <= 0) {
       toast.error("Please enter a valid positive payment amount.");
       return;
@@ -305,7 +348,7 @@ export default function LedgerPage() {
     setEditingExpense(expense);
     setExpenseForm({
       category: expense.category,
-      amount: String(expense.amount),
+      amount: formatPriceWithCommas(expense.amount),
       description: expense.description || "",
       expense_date: expense.expense_date || new Date().toISOString().split("T")[0],
     });
@@ -314,7 +357,7 @@ export default function LedgerPage() {
 
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = parseFloat(expenseForm.amount);
+    const amt = parseFloat(parsePriceFromFormatted(expenseForm.amount));
     if (isNaN(amt) || amt <= 0) {
       toast.error("Please enter a valid amount.");
       return;
@@ -360,6 +403,25 @@ export default function LedgerPage() {
       <Header
         title="Ledger Book & Accounts"
         subtitle="Manage and track store debts, receivables, payables, and day-to-day operational expenses."
+        actions={
+          <div className="flex gap-2">
+            <Button
+              onClick={openAddDebt}
+              className="bg-primary text-primary-foreground font-bold text-xs sm:text-sm rounded-lg hover:opacity-90 shadow-sm"
+            >
+              <Plus size={16} className="mr-1.5 shrink-0" />
+              Record Debt
+            </Button>
+            <Button
+              onClick={openAddExpense}
+              variant="outline"
+              className="border-border/50 hover:bg-accent text-xs sm:text-sm font-bold rounded-lg shadow-sm"
+            >
+              <Plus size={16} className="mr-1.5 shrink-0" />
+              Record Expense
+            </Button>
+          </div>
+        }
       />
 
       {/* Tabs Control */}
@@ -447,44 +509,58 @@ export default function LedgerPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-card/60 p-4 rounded-xl border border-border/50 shadow-sm">
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-card/60 p-4 rounded-xl border border-border/50 shadow-sm">
             <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                <input
+              <div className="flex-1 max-w-md">
+                <NormalInput
                   type="text"
                   placeholder="Search debtor/creditor name..."
                   value={debtSearch}
                   onChange={(e) => setDebtSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50"
+                  icon={Search}
                 />
               </div>
               {/* Filter */}
-              <div className="relative">
-                <select
+              <div className="w-full sm:w-48">
+                <NormalSelect
                   value={debtFilter}
-                  onChange={(e) => setDebtFilter(e.target.value)}
-                  className="w-full sm:w-48 pl-3 pr-8 py-2 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 appearance-none font-medium cursor-pointer"
-                >
-                  <option value="all">All Records</option>
-                  <option value="owed_to_us">Owed to Us</option>
-                  <option value="owed_by_us">Owed by Us</option>
-                  <option value="pending">Status: Pending</option>
-                  <option value="partially_paid">Status: Partial</option>
-                  <option value="paid">Status: Paid</option>
-                </select>
-                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={14} />
+                  onChange={setDebtFilter}
+                  options={[
+                    { value: "all", label: "All Records" },
+                    { value: "owed_to_us", label: "Owed to Us" },
+                    { value: "owed_by_us", label: "Owed by Us" },
+                    { value: "pending", label: "Status: Pending" },
+                    { value: "partially_paid", label: "Status: Partial" },
+                    { value: "paid", label: "Status: Paid" },
+                  ]}
+                  icon={Filter}
+                />
+              </div>
+              {/* Date Range Filter */}
+              <div className="w-full sm:w-48">
+                <NormalSelect
+                  value={debtDateFilter}
+                  onChange={(val) => setDebtDateFilter(val as any)}
+                  options={[
+                    { value: "all", label: "All Time" },
+                    { value: "today", label: "Today" },
+                    { value: "week", label: "Last 7 Days" },
+                    { value: "30days", label: "Last 30 Days" },
+                    { value: "month", label: "This Month" },
+                  ]}
+                  icon={Calendar}
+                />
               </div>
             </div>
 
-            <button
+            <Button
               onClick={openAddDebt}
               className="flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold text-sm px-5 py-2.5 rounded-lg hover:opacity-90 shadow-md shadow-primary/20 transition-all duration-300"
             >
               <Plus size={16} />
               Record Debt
-            </button>
+            </Button>
           </div>
 
           {/* Debts Table */}
@@ -849,45 +925,59 @@ export default function LedgerPage() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-card/60 p-4 rounded-xl border border-border/50 shadow-sm">
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-card/60 p-4 rounded-xl border border-border/50 shadow-sm">
             <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                <input
+              <div className="flex-1 max-w-md">
+                <NormalInput
                   type="text"
                   placeholder="Search expense description..."
                   value={expenseSearch}
                   onChange={(e) => setExpenseSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50"
+                  icon={Search}
                 />
               </div>
               {/* Filter */}
-              <div className="relative">
-                <select
+              <div className="w-full sm:w-48">
+                <NormalSelect
                   value={expenseFilter}
-                  onChange={(e) => setExpenseFilter(e.target.value)}
-                  className="w-full sm:w-48 pl-3 pr-8 py-2 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 appearance-none font-medium cursor-pointer"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="rent">Rent</option>
-                  <option value="salaries">Salaries</option>
-                  <option value="utilities">Utilities</option>
-                  <option value="purchases">Purchases</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="other">Other</option>
-                </select>
-                <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={14} />
+                  onChange={setExpenseFilter}
+                  options={[
+                    { value: "all", label: "All Categories" },
+                    { value: "rent", label: "Rent" },
+                    { value: "salaries", label: "Salaries" },
+                    { value: "utilities", label: "Utilities" },
+                    { value: "purchases", label: "Purchases" },
+                    { value: "marketing", label: "Marketing" },
+                    { value: "other", label: "Other" },
+                  ]}
+                  icon={Filter}
+                />
+              </div>
+              {/* Date Range Filter */}
+              <div className="w-full sm:w-48">
+                <NormalSelect
+                  value={expenseDateFilter}
+                  onChange={(val) => setExpenseDateFilter(val as any)}
+                  options={[
+                    { value: "all", label: "All Time" },
+                    { value: "today", label: "Today" },
+                    { value: "week", label: "Last 7 Days" },
+                    { value: "30days", label: "Last 30 Days" },
+                    { value: "month", label: "This Month" },
+                  ]}
+                  icon={Calendar}
+                />
               </div>
             </div>
 
-            <button
+            <Button
               onClick={openAddExpense}
               className="flex items-center justify-center gap-2 bg-primary text-primary-foreground font-bold text-sm px-5 py-2.5 rounded-lg hover:opacity-90 shadow-md shadow-primary/20 transition-all duration-300"
             >
               <Plus size={16} />
               Record Expense
-            </button>
+            </Button>
           </div>
 
           {/* Expenses List/Table */}
@@ -1035,61 +1125,51 @@ export default function LedgerPage() {
           </DialogHeader>
 
           <form onSubmit={handleDebtSubmit} className="space-y-4 pt-2">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Debt Type
-              </label>
-              <select
-                value={debtForm.debt_type}
-                onChange={(e) => {
-                  const newType = e.target.value as any;
-                  setDebtForm({
-                    ...debtForm,
-                    debt_type: newType,
-                    customer_id: "",
-                    debtor_creditor_name: "",
-                  });
-                }}
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-medium"
-              >
-                <option value="owed_to_us">Owed to Us (Receivable)</option>
-                <option value="owed_by_us">Owed by Us (Payable)</option>
-              </select>
-            </div>
+            <NormalSelect
+              label="Debt Type"
+              value={debtForm.debt_type}
+              onChange={(val) => {
+                const newType = val as any;
+                setDebtForm({
+                  ...debtForm,
+                  debt_type: newType,
+                  customer_id: "",
+                  debtor_creditor_name: "",
+                });
+              }}
+              options={[
+                { value: "owed_to_us", label: "Owed to Us (Receivable)" },
+                { value: "owed_by_us", label: "Owed by Us (Payable)" },
+              ]}
+            />
 
             {debtForm.debt_type === "owed_to_us" && (
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Link to Customer (Optional)
-                </label>
-                <select
-                  value={debtForm.customer_id || ""}
-                  onChange={(e) => {
-                    const custId = e.target.value;
-                    const matched = customers.find((c: any) => c.id === custId);
-                    setDebtForm({
-                      ...debtForm,
-                      customer_id: custId,
-                      debtor_creditor_name: matched ? matched.name : "",
-                    });
-                  }}
-                  className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-medium"
-                >
-                  <option value="">-- No Link (Enter Name Below) --</option>
-                  {customers.map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.phone})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <NormalSelect
+                label="Link to Customer (Optional)"
+                value={debtForm.customer_id || ""}
+                onChange={(val) => {
+                  const custId = val;
+                  const matched = customers.find((c: any) => c.id === custId);
+                  setDebtForm({
+                    ...debtForm,
+                    customer_id: custId,
+                    debtor_creditor_name: matched ? matched.name : "",
+                  });
+                }}
+                placeholder="-- No Link (Enter Name Below) --"
+                options={[
+                  { value: "", label: "-- No Link (Enter Name Below) --" },
+                  ...customers.map((c: any) => ({
+                    value: c.id,
+                    label: `${c.name} (${c.phone})`,
+                  })),
+                ]}
+              />
             )}
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                {debtForm.debt_type === "owed_to_us" ? "Debtor Name" : "Creditor Name"}
-              </label>
-              <input
+              <NormalInput
+                label={debtForm.debt_type === "owed_to_us" ? "Debtor Name" : "Creditor Name"}
                 type="text"
                 required
                 value={debtForm.debtor_creditor_name}
@@ -1100,7 +1180,6 @@ export default function LedgerPage() {
                     ? "Enter debtor name..."
                     : "e.g. ABC Wholesalers, Supplier"
                 }
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 disabled:opacity-60 disabled:cursor-not-allowed"
               />
               {debtForm.customer_id && (
                 <p className="text-[10px] text-primary mt-1 font-semibold">
@@ -1109,36 +1188,27 @@ export default function LedgerPage() {
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Total Amount (₦)
-              </label>
-              <input
-                type="number"
-                required
-                step="0.01"
-                min="0.01"
-                value={debtForm.amount}
-                onChange={(e) => setDebtForm({ ...debtForm, amount: e.target.value })}
-                placeholder="0.00"
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-bold"
-              />
-            </div>
+            <NormalInput
+              label="Total Amount (₦)"
+              type="text"
+              required
+              value={debtForm.amount}
+              onChange={(e) => {
+                const formatted = formatPriceWithCommas(e.target.value);
+                setDebtForm({ ...debtForm, amount: formatted });
+              }}
+              placeholder="0.00"
+            />
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Due Date
-              </label>
-              <input
-                type="date"
-                value={debtForm.due_date}
-                onChange={(e) => setDebtForm({ ...debtForm, due_date: e.target.value })}
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-medium"
-              />
-            </div>
+            <NormalInput
+              label="Due Date"
+              type="date"
+              value={debtForm.due_date}
+              onChange={(e) => setDebtForm({ ...debtForm, due_date: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">
                 Description / Notes
               </label>
               <textarea
@@ -1146,7 +1216,7 @@ export default function LedgerPage() {
                 onChange={(e) => setDebtForm({ ...debtForm, description: e.target.value })}
                 placeholder="Details of what was purchased or terms of payment..."
                 rows={3}
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 resize-none"
+                className="w-full p-3 text-sm bg-background border border-input rounded-lg hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring resize-none transition-colors min-h-[80px]"
               />
             </div>
 
@@ -1182,55 +1252,42 @@ export default function LedgerPage() {
           </DialogHeader>
 
           <form onSubmit={handleExpenseSubmit} className="space-y-4 pt-2">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Expense Category
-              </label>
-              <select
-                value={expenseForm.category}
-                onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value as any })}
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-medium"
-              >
-                <option value="rent">Rent</option>
-                <option value="salaries">Salaries</option>
-                <option value="utilities">Utilities</option>
-                <option value="purchases">Stock Purchases</option>
-                <option value="marketing">Marketing & Sales</option>
-                <option value="other">Other Operational Expenses</option>
-              </select>
-            </div>
+            <NormalSelect
+              label="Expense Category"
+              value={expenseForm.category}
+              onChange={(val) => setExpenseForm({ ...expenseForm, category: val as any })}
+              options={[
+                { value: "rent", label: "Rent" },
+                { value: "salaries", label: "Salaries" },
+                { value: "utilities", label: "Utilities" },
+                { value: "purchases", label: "Stock Purchases" },
+                { value: "marketing", label: "Marketing & Sales" },
+                { value: "other", label: "Other Operational Expenses" },
+              ]}
+            />
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Amount (₦)
-              </label>
-              <input
-                type="number"
-                required
-                step="0.01"
-                min="0.01"
-                value={expenseForm.amount}
-                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                placeholder="0.00"
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-bold text-rose-600"
-              />
-            </div>
+            <NormalInput
+              label="Amount (₦)"
+              type="text"
+              required
+              value={expenseForm.amount}
+              onChange={(e) => {
+                const formatted = formatPriceWithCommas(e.target.value);
+                setExpenseForm({ ...expenseForm, amount: formatted });
+              }}
+              placeholder="0.00"
+            />
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                Expense Date
-              </label>
-              <input
-                type="date"
-                required
-                value={expenseForm.expense_date}
-                onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })}
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-medium"
-              />
-            </div>
+            <NormalInput
+              label="Expense Date"
+              type="date"
+              required
+              value={expenseForm.expense_date}
+              onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })}
+            />
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">
                 Description / Memo
               </label>
               <textarea
@@ -1238,7 +1295,7 @@ export default function LedgerPage() {
                 onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
                 placeholder="e.g. Paid electricity bill for July, purchase of logistics printer..."
                 rows={3}
-                className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 resize-none"
+                className="w-full p-3 text-sm bg-background border border-input rounded-lg hover:border-ring/60 focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring resize-none transition-colors min-h-[80px]"
               />
             </div>
 
@@ -1311,22 +1368,17 @@ export default function LedgerPage() {
               </div>
 
               <form onSubmit={handlePaymentSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                    Payment Amount (₦)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0.01"
-                    max={Number(paymentDebt.amount) - Number(paymentDebt.amount_paid || 0)}
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full p-2.5 text-sm bg-muted/40 border border-border/50 rounded-lg focus:outline-none focus:border-primary/50 font-bold text-emerald-600"
-                  />
-                </div>
+                <NormalInput
+                  label="Payment Amount (₦)"
+                  type="text"
+                  required
+                  value={paymentAmount}
+                  onChange={(e) => {
+                    const formatted = formatPriceWithCommas(e.target.value);
+                    setPaymentAmount(formatted);
+                  }}
+                  placeholder="0.00"
+                />
 
                 <DialogFooter className="pt-2">
                   <button
