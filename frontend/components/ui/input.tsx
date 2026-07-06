@@ -516,4 +516,127 @@ const NormalInput = React.forwardRef<HTMLInputElement, NormalInputProps>(
 );
 NormalInput.displayName = "NormalInput";
 
-export { Input, NormalInput };
+interface NormalSelectProps {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Option[];
+  placeholder?: string;
+  disabled?: boolean;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  error?: string;
+}
+
+function NormalSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Select option",
+  disabled = false,
+  icon: Icon,
+  error,
+}: NormalSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  const getContainerClasses = () => {
+    const base =
+      "relative flex items-center rounded-lg border bg-background transition-colors";
+    const state = error
+      ? "border-destructive/50 focus-within:border-destructive focus-within:ring-2 focus-within:ring-destructive/20"
+      : focused
+      ? "border-ring ring-2 ring-ring/20 shadow-sm"
+      : "border-input hover:border-ring/60";
+    const disabledState = disabled
+      ? "opacity-50 cursor-not-allowed bg-muted"
+      : "";
+    return `${base} ${state} ${disabledState}`;
+  };
+
+  const getIconClasses = () =>
+    error
+      ? "text-destructive"
+      : focused
+      ? "text-primary"
+      : "text-muted-foreground";
+
+  const fieldClass =
+    "flex-1 px-4 py-2.5 bg-transparent outline-none text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed";
+
+  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedLabel = selectedOption ? selectedOption.label : "";
+
+  return (
+    <div className="w-full space-y-2">
+      {label && (
+        <label className="block text-sm font-medium text-foreground">
+          {label}
+        </label>
+      )}
+      <div className={`${getContainerClasses()} w-full relative`}>
+        {Icon && (
+          <Icon
+            size={18}
+            className={`ml-3 transition-colors ${getIconClasses()}`}
+          />
+        )}
+        
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setIsOpen(!isOpen)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            setTimeout(() => setIsOpen(false), 200);
+          }}
+          className={`${fieldClass} w-full pr-10 text-left cursor-pointer flex items-center justify-between min-h-[44px]`}
+        >
+          <span className={value ? "text-foreground font-semibold" : "text-muted-foreground font-semibold"}>
+            {selectedLabel || placeholder}
+          </span>
+          <ChevronDown
+            size={16}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-200 ${
+              isOpen ? "rotate-180 text-primary" : "text-muted-foreground"
+            }`}
+          />
+        </button>
+
+        {isOpen && !disabled && (
+          <div className="absolute top-[calc(100%+4px)] left-0 right-0 w-full z-50 bg-background border border-border rounded-lg shadow-xl max-h-52 overflow-y-auto divide-y divide-border/20 py-1">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted/60 transition-colors flex justify-between items-center cursor-pointer ${
+                  value === opt.value
+                    ? "bg-primary/5 text-primary font-bold"
+                    : "text-foreground font-medium"
+                }`}
+              >
+                <span>{opt.label}</span>
+                {value === opt.value && (
+                  <Check size={16} className="text-primary shrink-0 ml-2" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {error && (
+        <div className="flex items-start gap-1.5 text-sm text-destructive">
+          <X size={16} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { Input, NormalInput, NormalSelect };

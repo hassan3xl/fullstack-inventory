@@ -10,13 +10,14 @@ import {
   useGetInventoryStats,
   useGetProductsCategories,
 } from "@/lib/hooks/product.hook";
-import { Package, Search } from "lucide-react";
+import { Package, Search, Filter, Tag } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Loading from "@/components/Loader";
 import { useBusinessConfig } from "@/lib/hooks/useBusinessConfig";
 import { Pagination } from "@/components/ui/Pagination";
 import { useGetStore } from "@/lib/hooks/store.hook";
 import { toast } from "sonner";
+import { NormalInput, NormalSelect } from "@/components/ui/input";
 
 const ProductsInventory: React.FC = () => {
   const { config } = useBusinessConfig();
@@ -177,52 +178,62 @@ const ProductsInventory: React.FC = () => {
           />
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 bg-card p-6 rounded-xl border border-border/50 shadow-sm">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-muted/30 border border-transparent rounded-lg focus:bg-background focus:border-primary/20 transition-all text-sm font-medium"
-              />
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-card/60 p-4 rounded-xl border border-border/50 shadow-sm">
+            <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Search */}
+              <div className="flex-1 max-w-md">
+                <NormalInput
+                  type="text"
+                  placeholder="Search by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  icon={Search}
+                />
+              </div>
+
+              {/* Classification Filter */}
+              <div className="w-full sm:w-48">
+                <NormalSelect
+                  value={filterCategory}
+                  onChange={setFilterCategory}
+                  options={[
+                    { value: "all", label: "All Classifications" },
+                    ...categories.map((cat: any) => ({ value: cat, label: cat })),
+                  ]}
+                  icon={Tag}
+                />
+              </div>
+
+              {/* Stock Status Filter */}
+              <div className="w-full sm:w-48">
+                <NormalSelect
+                  value={stockFilter}
+                  onChange={setStockFilter}
+                  options={[
+                    { value: "all", label: "All Stock Status" },
+                    { value: "in-stock", label: "Available Items" },
+                    { value: "low-stock", label: "Critical Levels" },
+                    { value: "out-of-stock", label: "Depleted Stock" },
+                    ...(showExpiry ? [{ value: "expiring", label: "Expiring Soon" }] : []),
+                  ]}
+                  icon={Filter}
+                />
+              </div>
+
+              {/* Active Status Filter */}
+              <div className="w-full sm:w-40">
+                <NormalSelect
+                  value={activeStatusFilter}
+                  onChange={setActiveStatusFilter}
+                  options={[
+                    { value: "all", label: "All Status" },
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                  icon={Filter}
+                />
+              </div>
             </div>
-
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-3 bg-muted/30 border border-transparent rounded-lg focus:bg-background focus:border-primary/20 transition-all text-sm font-bold min-w-[180px]"
-            >
-              <option value="all">All Classifications</option>
-              {categories.map((cat: any) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={stockFilter}
-              onChange={(e) => setStockFilter(e.target.value)}
-              className="px-4 py-3 bg-muted/30 border border-transparent rounded-lg focus:bg-background focus:border-primary/20 transition-all text-sm font-bold min-w-[180px]"
-            >
-              <option value="all">All Stock Status</option>
-              <option value="in-stock">Available Items</option>
-              <option value="low-stock">Critical Levels</option>
-              <option value="out-of-stock">Depleted Stock</option>
-              {showExpiry && <option value="expiring">Expiring Soon</option>}
-            </select>
-
-            <select
-              value={activeStatusFilter}
-              onChange={(e) => setActiveStatusFilter(e.target.value)}
-              className="px-4 py-3 bg-muted/30 border border-transparent rounded-lg focus:bg-background focus:border-primary/20 transition-all text-sm font-bold min-w-[150px]"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
           </div>
 
           {/* Product Grid */}

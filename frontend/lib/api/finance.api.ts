@@ -16,6 +16,8 @@ export interface DebtData {
   description?: string;
   due_date?: string | null;
   status?: "pending" | "partially_paid" | "paid";
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ExpenseData {
@@ -24,6 +26,8 @@ export interface ExpenseData {
   amount: number;
   description?: string;
   expense_date?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const financeApi = {
