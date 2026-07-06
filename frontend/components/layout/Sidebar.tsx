@@ -16,6 +16,7 @@ import {
   CreditCard,
   Lock,
   User2,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -314,6 +315,62 @@ export default function Sidebar() {
                     </span>
                   </Link>
                 ))}
+
+              {isFreePlan ? (
+                <button
+                  onClick={() => {
+                    closeSidebar();
+                    toast.error("Ledger Tracker is Premium", {
+                      description:
+                        "Upgrade your plan to Basic or above to access bookkeeping ledger.",
+                    });
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                >
+                  <Wallet size={18} />
+                  <span className="font-bold text-sm tracking-tight text-left flex-1">
+                    Ledger Book
+                  </span>
+                  <Lock
+                    size={14}
+                    className="text-muted-foreground/45 shrink-0"
+                  />
+                </button>
+              ) : !isOnline ? (
+                <button
+                  onClick={() => {
+                    closeSidebar();
+                    toast.error("Offline Feature", {
+                      description: "Ledger features are only available online.",
+                    });
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/50 cursor-not-allowed hover:bg-accent/10"
+                >
+                  <Wallet size={18} />
+                  <span className="font-bold text-sm tracking-tight text-left flex-1">
+                    Ledger Book
+                  </span>
+                  <Lock
+                    size={14}
+                    className="text-muted-foreground/45 shrink-0"
+                  />
+                </button>
+              ) : (
+                <Link
+                  href="/ledger"
+                  onClick={closeSidebar}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group ${
+                    isActive("/ledger")
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "hover:bg-accent/50 text-foreground"
+                  }`}
+                >
+                  <Wallet size={18} />
+                  <span className="font-bold text-sm tracking-tight">
+                    Ledger Book
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
 

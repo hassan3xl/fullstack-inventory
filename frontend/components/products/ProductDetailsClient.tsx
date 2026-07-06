@@ -104,6 +104,25 @@ const ProductDetailsClient = () => {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showEditBatchModal, setShowEditBatchModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
+  const [isTogglingActive, setIsTogglingActive] = useState(false);
+
+  const handleToggleActive = async () => {
+    setIsTogglingActive(true);
+    try {
+      const response = await apiService.post(
+        `/inventory/products/${productId}/toggle-active/`,
+        {}
+      );
+      toast.success(response.message || "Product status updated successfully");
+      refetch();
+    } catch (error: any) {
+      toast.error(
+        error?.error || error?.detail || "Failed to update product status."
+      );
+    } finally {
+      setIsTogglingActive(false);
+    }
+  };
 
   const deleteBatchMutation = useDeleteStockBatch();
   const deleteProductMutation = useDeleteProduct();
@@ -300,7 +319,7 @@ const ProductDetailsClient = () => {
                 <p className="text-muted-foreground">{product.description}</p>
               </div>
 
-              {/* Pricing & Category */}
+              {/* Pricing, Category, SKU Created & Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
@@ -318,22 +337,34 @@ const ProductDetailsClient = () => {
                     {product.category?.name || "Uncategorized"}
                   </p>
                 </div>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">
-                  Inventory Status
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      isActive ? "bg-green-500" : "bg-gray-500"
-                    }`}
-                  />
-                  <span className="font-medium text-sm">
-                    {isActive ? "Regular Stock" : "Inactive / Discontinued"}
-                  </span>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    SKU Created
+                  </label>
+                  <p className="font-medium text-sm text-foreground">
+                    {product.created_at
+                      ? new Date(product.created_at).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Inventory Status
+                  </label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        isActive ? "bg-green-500" : "bg-gray-500"
+                      }`}
+                    />
+                    <span className="font-medium text-sm">
+                      {isActive ? "Regular Stock" : "Inactive / Discontinued"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -363,7 +394,7 @@ const ProductDetailsClient = () => {
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-black text-muted-foreground">
-                    Expiry Date
+                    Soonest Batch Expiry
                   </label>
                   <p
                     className={`text-sm font-black ${product.is_expired ? "text-red-600" : "text-emerald-600"}`}
@@ -384,7 +415,7 @@ const ProductDetailsClient = () => {
                   )}
                   {product.is_expired && (
                     <p className="text-[10px] font-black text-red-600 animate-pulse mt-1">
-                      CRITICAL: PRODUCT EXPIRED
+                      CRITICAL: BATCH EXPIRED
                     </p>
                   )}
                 </div>
@@ -573,11 +604,21 @@ const ProductDetailsClient = () => {
                       </div>
                     </div>
 
-                    {/* Date Row: Production & Expiry */}
-                    <div className="grid grid-cols-2 gap-4 text-xs pt-3 border-t border-border/40">
+                    {/* Date Row: Date Added, Production & Expiry */}
+                    <div className="grid grid-cols-3 gap-2 text-[10px] pt-3 border-t border-border/40">
                       <div>
                         <p className="text-muted-foreground font-semibold">
-                          Production Date
+                          Date Added
+                        </p>
+                        <p className="text-foreground font-medium mt-0.5">
+                          {batch.created_at
+                            ? new Date(batch.created_at).toLocaleDateString()
+                            : "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground font-semibold">
+                          Production
                         </p>
                         <p className="text-foreground font-medium mt-0.5">
                           {batch.production_date
@@ -643,6 +684,7 @@ const ProductDetailsClient = () => {
                           ? `${product.pack_unit}s & ${product.base_unit}s`
                           : "Quantity"}
                       </th>
+                      <th className="px-6 py-4">Date Added</th>
                       <th className="px-6 py-4">Production Date</th>
                       <th className="px-6 py-4">Expiry Date</th>
                       <th className="px-6 py-4">Days Left</th>
@@ -685,6 +727,11 @@ const ProductDetailsClient = () => {
                             product.pack_unit || "Box",
                             product.units_per_pack || 1,
                           )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {batch.created_at
+                            ? new Date(batch.created_at).toLocaleDateString()
+                            : "-"}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
                           {batch.production_date
@@ -802,6 +849,27 @@ const ProductDetailsClient = () => {
                     className="flex-1 md:flex-initial rounded-lg font-black border-primary/20 hover:bg-primary/5 hover:text-primary transition-all active:scale-95 cursor-pointer"
                   >
                     Upload Image
+                  </Button>
+                )}
+                {isActive ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleToggleActive}
+                    className="flex-1 md:flex-initial rounded-lg font-black border-amber-200 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-all active:scale-95 cursor-pointer"
+                    disabled={isTogglingActive}
+                  >
+                    Deactivate SKU
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleToggleActive}
+                    className="flex-1 md:flex-initial rounded-lg font-black border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all active:scale-95 cursor-pointer"
+                    disabled={isTogglingActive}
+                  >
+                    Activate SKU
                   </Button>
                 )}
                 <Button

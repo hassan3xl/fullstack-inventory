@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.tenants",
     "apps.sales",
+    "apps.finance",
 ]
 
 AUTH_USER_MODEL = "users.User" 

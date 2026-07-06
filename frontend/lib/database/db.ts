@@ -102,6 +102,34 @@ export interface SaleItem {
   deleted: number;
 }
 
+export interface Debt {
+  id: string;
+  customer_id?: string | null;
+  debt_type: 'owed_to_us' | 'owed_by_us';
+  debtor_creditor_name: string;
+  amount: number;
+  amount_paid: number;
+  description?: string;
+  due_date?: string | null;
+  status: 'pending' | 'partially_paid' | 'paid';
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted: number;
+}
+
+export interface Expense {
+  id: string;
+  category: string;
+  amount: number;
+  description?: string;
+  expense_date: string;
+  tenant_id: string;
+  created_at: string;
+  updated_at: string;
+  deleted: number;
+}
+
 export interface OutboxItem {
   id?: number; // auto-incremented primary key for outbox queue
   action: 'create' | 'update' | 'delete';
@@ -120,6 +148,8 @@ export class QStackDatabase extends Dexie {
   customers!: Table<Customer, string>;
   sales!: Table<Sale, string>;
   saleItems!: Table<SaleItem, string>;
+  debts!: Table<Debt, string>;
+  expenses!: Table<Expense, string>;
   outbox!: Table<OutboxItem, number>;
 
   constructor(tenantId: string) {
@@ -135,6 +165,19 @@ export class QStackDatabase extends Dexie {
       sales: 'id, customer_id, status, tenant_id, deleted',
       saleItems: 'id, sale_id, product_id, tenant_id, deleted',
       outbox: '++id, table, record_id, action, tenant_id, timestamp'
+    });
+
+    this.version(2).stores({
+      categories: 'id, business_type, name, tenant_id, deleted',
+      products: 'id, sku, barcode, category_id, tenant_id, deleted',
+      stockBatches: 'id, product_id, expiry_date, tenant_id, deleted',
+      productInventories: 'id, product_id, tenant_id, deleted',
+      customers: 'id, name, phone, email, tenant_id, deleted',
+      sales: 'id, customer_id, status, tenant_id, deleted',
+      saleItems: 'id, sale_id, product_id, tenant_id, deleted',
+      outbox: '++id, table, record_id, action, tenant_id, timestamp',
+      debts: 'id, customer_id, debt_type, status, tenant_id, deleted',
+      expenses: 'id, category, expense_date, tenant_id, deleted'
     });
   }
 }

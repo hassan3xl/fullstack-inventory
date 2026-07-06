@@ -103,11 +103,21 @@ class Product(TenantBaseModel):
             self.expiry_date = None
             self.production_date = None
             
+        # Determine if expired
+        is_expired = self.expiry_date and self.expiry_date < now
+        
+        # Auto-deactivate if expired and no active stock, reactivate if active stock exists
+        if is_expired and total_stock == 0:
+            self.is_active = False
+        elif total_stock > 0:
+            self.is_active = True
+            
         # Update without recursion
         Product.objects.filter(id=self.id).update(
             stock=self.stock,
             expiry_date=self.expiry_date,
-            production_date=self.production_date
+            production_date=self.production_date,
+            is_active=self.is_active
         )
 
     def save(self, *args, **kwargs):

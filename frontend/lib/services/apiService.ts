@@ -149,6 +149,7 @@ export const apiService = {
         normalizedUrl.startsWith("/inventory/products/") ||
         normalizedUrl.startsWith("/sales/customers/") ||
         normalizedUrl.startsWith("/sales/") ||
+        normalizedUrl.startsWith("/finance/") ||
         normalizedUrl === "/business/profile/" ||
         normalizedUrl === "/auth/user/";
 

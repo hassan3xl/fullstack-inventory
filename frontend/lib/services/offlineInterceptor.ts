@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { getDb, QStackDatabase } from "../database/db";
 import { getActiveTenantId, syncService } from "./syncService";
 import { v4 as uuidv4 } from "uuid";
@@ -310,6 +311,43 @@ class OfflineInterceptor {
       return sales;
     }
 
+    // 4. GET Debts
+    if (normalizedUrl.startsWith("/finance/debts/")) {
+      const match = normalizedUrl.match(/\/finance\/debts\/([a-fA-F0-9-]{36})\//);
+      if (match) {
+        const debtId = match[1];
+        const debt = await db.debts.get(debtId);
+        if (!debt) throw new Error("Debt not found locally");
+        const customer = debt.customer_id ? await db.customers.get(debt.customer_id) : null;
+        return {
+          ...debt,
+          customer: customer || null,
+        };
+      }
+
+      const debts = await db.debts.toArray();
+      const customers = await db.customers.toArray();
+      const customerMap = new Map(customers.map((c) => [c.id, c]));
+      return debts.map((d) => ({
+        ...d,
+        customer: d.customer_id ? customerMap.get(d.customer_id) || null : null,
+      }));
+    }
+
+    // 5. GET Expenses
+    if (normalizedUrl.startsWith("/finance/expenses/")) {
+      const match = normalizedUrl.match(/\/finance\/expenses\/([a-fA-F0-9-]{36})\//);
+      if (match) {
+        const expenseId = match[1];
+        const expense = await db.expenses.get(expenseId);
+        if (!expense) throw new Error("Expense not found locally");
+        return expense;
+      }
+
+      const expenses = await db.expenses.toArray();
+      return expenses;
+    }
+
     throw new Error(`Offline query handler not implemented for URL: ${url}`);
   }
 
@@ -324,7 +362,8 @@ class OfflineInterceptor {
       normalizedUrl === "/inventory/products/categories/" ||
       normalizedUrl.startsWith("/inventory/products/categories/")
     ) {
-      throw new Error("Category changes are read-only in offline mode.");
+      toast.error("Category changes are read-only in offline mode.");
+      return;
     }
 
     // 1. Create Sale (POS Checkout)
@@ -813,6 +852,181 @@ class OfflineInterceptor {
         });
       }
 
+      return { detail: "Deleted successfully" };
+    }
+
+    // 12. Create Debt
+    if (normalizedUrl === "/finance/debts/" && method === "POST") {
+      const amount = Number(data.amount || 0);
+      const amountPaid = Number(data.amount_paid || 0);
+      
+      let status: 'pending' | 'partially_paid' | 'paid' = 'pending';
+      if (amountPaid >= amount) {
+        status = 'paid';
+      } else if (amountPaid > 0) {
+        status = 'partially_paid';
+      }
+
+      let debtorCreditorName = data.debtor_creditor_name;
+      let customerPayload = null;
+      if (data.customer_id) {
+        const customer = await db.customers.get(data.customer_id);
+        if (customer) {
+          customerPayload = {
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone || "",
+            email: customer.email || "",
+          };
+          if (!debtorCreditorName) {
+            debtorCreditorName = customer.name;
+          }
+        }
+      }
+
+      const debtPayload = {
+        id: recordId,
+        customer_id: data.customer_id || null,
+        debt_type: data.debt_type || "owed_to_us",
+        debtor_creditor_name: debtorCreditorName || "",
+        amount: amount,
+        amount_paid: amountPaid,
+        description: data.description || "",
+        due_date: data.due_date || null,
+        status: status,
+        created_at: timestamp,
+        updated_at: timestamp,
+        deleted: 0,
+      };
+
+      await syncService.registerMutation(
+        "debts",
+        "create",
+        recordId,
+        debtPayload
+      );
+
+      return {
+        ...debtPayload,
+        customer: customerPayload,
+      };
+    }
+
+    // 13. Edit/Update Debt
+    const debtEditMatch = normalizedUrl.match(/\/finance\/debts\/([a-fA-F0-9-]{36})\//);
+    if (debtEditMatch && (method === "PATCH" || method === "PUT")) {
+      const debtId = debtEditMatch[1];
+      const oldDebt = await db.debts.get(debtId);
+      if (!oldDebt) throw new Error("Debt not found locally");
+
+      const updatedData = { ...data };
+      
+      const amount = updatedData.amount !== undefined ? Number(updatedData.amount) : Number(oldDebt.amount);
+      const amountPaid = updatedData.amount_paid !== undefined ? Number(updatedData.amount_paid) : Number(oldDebt.amount_paid);
+      
+      let status: 'pending' | 'partially_paid' | 'paid' = 'pending';
+      if (amountPaid >= amount) {
+        status = 'paid';
+      } else if (amountPaid > 0) {
+        status = 'partially_paid';
+      }
+      updatedData.status = status;
+
+      let debtorCreditorName = updatedData.debtor_creditor_name || oldDebt.debtor_creditor_name;
+      let customerPayload = null;
+      const customerId = updatedData.customer_id !== undefined ? updatedData.customer_id : oldDebt.customer_id;
+      if (customerId) {
+        const customer = await db.customers.get(customerId);
+        if (customer) {
+          customerPayload = {
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone || "",
+            email: customer.email || "",
+          };
+          if (!updatedData.debtor_creditor_name && !oldDebt.debtor_creditor_name) {
+            debtorCreditorName = customer.name;
+          }
+        }
+      }
+
+      const newDebt = {
+        ...oldDebt,
+        ...updatedData,
+        debtor_creditor_name: debtorCreditorName,
+        updated_at: timestamp,
+      };
+
+      await syncService.registerMutation(
+        "debts",
+        "update",
+        debtId,
+        updatedData
+      );
+
+      return {
+        ...newDebt,
+        customer: customerPayload,
+      };
+    }
+
+    // 14. Delete Debt
+    if (debtEditMatch && method === "DELETE") {
+      const debtId = debtEditMatch[1];
+      await syncService.registerMutation("debts", "delete", debtId, null);
+      return { detail: "Deleted successfully" };
+    }
+
+    // 15. Create Expense
+    if (normalizedUrl === "/finance/expenses/" && method === "POST") {
+      const expensePayload = {
+        id: recordId,
+        category: data.category || "other",
+        amount: Number(data.amount || 0),
+        description: data.description || "",
+        expense_date: data.expense_date || new Date().toISOString().split("T")[0],
+        created_at: timestamp,
+        updated_at: timestamp,
+        deleted: 0,
+      };
+
+      await syncService.registerMutation(
+        "expenses",
+        "create",
+        recordId,
+        expensePayload
+      );
+
+      return expensePayload;
+    }
+
+    // 16. Edit/Update Expense
+    const expenseEditMatch = normalizedUrl.match(/\/finance\/expenses\/([a-fA-F0-9-]{36})\//);
+    if (expenseEditMatch && (method === "PATCH" || method === "PUT")) {
+      const expenseId = expenseEditMatch[1];
+      const oldExpense = await db.expenses.get(expenseId);
+      if (!oldExpense) throw new Error("Expense not found locally");
+
+      const newExpense = {
+        ...oldExpense,
+        ...data,
+        updated_at: timestamp,
+      };
+
+      await syncService.registerMutation(
+        "expenses",
+        "update",
+        expenseId,
+        data
+      );
+
+      return newExpense;
+    }
+
+    // 17. Delete Expense
+    if (expenseEditMatch && method === "DELETE") {
+      const expenseId = expenseEditMatch[1];
+      await syncService.registerMutation("expenses", "delete", expenseId, null);
       return { detail: "Deleted successfully" };
     }
 

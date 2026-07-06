@@ -6,51 +6,35 @@ import sys
 import threading
 import time
 import requests
-
+from django.core.cache import cache
+# pyrefly: ignore [missing-import]
 from apps.products import views
 
 
+HEALTH_CACHE_KEY = "qstack_health_check"
+HEALTH_CACHE_TTL = 120 
+
 def health_check(request):
-    return JsonResponse({
-        "status": "ok",
-        "message": "Backend service is available.",
-    })
+    cached = cache.get(HEALTH_CACHE_KEY)
 
+    if cached is not None:
+        data = cached
+    else:
+        data = {
+            "status": "ok",
+            "service": "qstack-inventory",
+            "message": "Backend service is available.",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+        cache.set(HEALTH_CACHE_KEY, data, timeout=HEALTH_CACHE_TTL)
 
-def ping_self():
-    # Wait for Django to start up completely before sending the first request
-    time.sleep(15)
-    
-    url = os.environ.get("RENDER_EXTERNAL_URL") or "https://qstack-inventory-backend.onrender.com"
-    if not url.endswith('/'):
-        url += '/'
-    ping_url = f"{url}ping/"
-    
-    print(f"[Keep-Alive] Starting background ping worker for: {ping_url}")
-    while True:
-        try:
-            response = requests.get(ping_url, timeout=30)
-            print(f"[Keep-Alive] Pinged {ping_url} - Status Code: {response.status_code}")
-        except Exception as e:
-            print(f"[Keep-Alive] Error pinging {ping_url}: {e}")
-        time.sleep(300)  # Sleep for 5 minutes (300 seconds)
+    response = JsonResponse(data)
+    response['Cache-Control'] = 'public, max-age=120'
+    return response
 
-def should_start_ping():
-    # Prevent running during test execution (pytest, django tests, etc.)
-    if 'test' in sys.argv or 'pytest' in sys.modules or 'pytest' in sys.argv[0]:
-        return False
-    # If running with django runserver, only start in the main worker process, not the reloader parent process
-    if 'runserver' in sys.argv and os.environ.get('RUN_MAIN') != 'true':
-        return False
-    return True
-
-if should_start_ping():
-    threading.Thread(target=ping_self, daemon=True).start()
 
 urlpatterns = [
-    # ping the backend to check if it's alive every 5 minutes
-    # path('ping/', ping_self, name='ping'),
-    path('api/health/', health_check, name='api-health'),
+    path('api/health/', health_check, name='health'),
     path('admin/', admin.site.urls),
     path('api/', include('api.router.urls')),
 

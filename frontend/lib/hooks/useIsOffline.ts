@@ -63,12 +63,11 @@ class NetworkStatusTracker {
         (typeof window !== "undefined"
           ? window.location.origin
           : "http://localhost:8000");
-      const pingUrl = `${baseUrl.replace(/\/$/, "")}/health/`;
-      console.log(pingUrl);
+      const pingUrl = `${baseUrl}/health/`;
       await fetch(pingUrl, {
         method: "GET",
         signal: controller.signal,
-        cache: "no-store",
+        cache: "default", // Respect HTTP Cache-Control header
       });
       clearTimeout(timeoutId);
       this.setOffline(false);
