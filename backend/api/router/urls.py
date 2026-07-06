@@ -46,4 +46,6 @@ urlpatterns = [
     # User profile
     path('user/profile/', include('api.controllers.users.urls')),
 
+    # Finance (Debts & Expenses)
+    path('finance/', include('api.controllers.finance.urls')),
 ]

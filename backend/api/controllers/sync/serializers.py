@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps.products.models import Category, Product, StockBatch, ProductInventory
 from apps.sales.models import Customer, Sale, SaleItem
+from apps.finance.models import Debt, Expense
 
 class SyncCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,3 +50,15 @@ class SyncSaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = ['id', 'sale_number', 'cashier_id', 'customer_id', 'subtotal', 'tax', 'discount', 'total_amount', 'payment_method', 'payment_status', 'created_at', 'updated_at', 'deleted', 'items']
+
+class SyncDebtSerializer(serializers.ModelSerializer):
+    customer_id = serializers.PrimaryKeyRelatedField(source='customer', queryset=Customer.objects.all(), required=False, allow_null=True)
+
+    class Meta:
+        model = Debt
+        fields = ['id', 'customer_id', 'debt_type', 'debtor_creditor_name', 'amount', 'amount_paid', 'description', 'due_date', 'status', 'created_at', 'updated_at', 'deleted']
+
+class SyncExpenseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expense
+        fields = ['id', 'category', 'amount', 'description', 'expense_date', 'created_at', 'updated_at', 'deleted']

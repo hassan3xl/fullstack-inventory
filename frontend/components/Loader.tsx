@@ -6,6 +6,7 @@ import { FinanceSkeleton } from "@/components/skeletons/FinanceSkeleton";
 import { TableSkeleton } from "@/components/skeletons/TableSkeleton";
 import { PageSkeleton } from "@/components/skeletons/PageSkeleton";
 import { OnboardingSkeleton } from "@/components/skeletons/OnboardingSkeleton";
+import { AuthSkeleton } from "@/components/skeletons/AuthSkeleton";
 
 export default function Loader() {
   const pathname = usePathname() || "";
@@ -13,6 +14,19 @@ export default function Loader() {
   const getPageSkeleton = () => {
     if (pathname.includes("/onboarding")) {
       return <OnboardingSkeleton />;
+    }
+    if (
+      pathname.includes("/login") ||
+      pathname.includes("/register") ||
+      pathname.includes("/forgot-password") ||
+      pathname.includes("/reset-password") ||
+      pathname.includes("/profile-setup")
+    ) {
+      return (
+        <div className="flex items-center justify-center min-h-screen w-full">
+          <AuthSkeleton />
+        </div>
+      );
     }
     if (pathname.includes("/dashboard") || pathname.includes("subscription")) {
       return <DashboardSkeleton />;

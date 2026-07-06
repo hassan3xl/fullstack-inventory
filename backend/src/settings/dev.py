@@ -50,19 +50,32 @@ DATABASES = {
     
 
 
-if USE_REDIS_CACHE == True:  # Redis available (production/dev with Redis)
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
-        }
+# Smart Redis caching with local fallback
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
-else:  # No Redis — fall back to in-memory (local dev / no Redis deploy)
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+}
+
+USE_REDIS_CACHE_ENV = os.getenv('USE_REDIS_CACHE', 'False').lower() in ('true', '1', 'yes')
+redis_url = os.environ.get("REDIS_URL")
+
+if USE_REDIS_CACHE_ENV or redis_url:
+    import redis
+    test_url = redis_url or "redis://127.0.0.1:6379/1"
+    try:
+        # Quick ping check (timeout 1.0s to avoid blocking server boot)
+        client = redis.from_url(test_url, socket_timeout=1.0)
+        client.ping()
+        CACHES = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": test_url,
+            }
         }
-    }
+        print(f"[Cache] Connected to Redis at {test_url}. Using RedisCache.")
+    except Exception as e:
+        print(f"[Cache] Redis check failed ({e}). Falling back to LocMemCache.")
 
 # Try to get Resend API key from environment, fallback to the one loaded by dotenv in config
 RESEND_API_KEY_VAL = os.environ.get('RESEND_API_KEY') or (RESEND_API_KEY if 'RESEND_API_KEY' in globals() else None)

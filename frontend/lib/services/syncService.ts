@@ -78,7 +78,9 @@ class SyncService {
         db.productInventories,
         db.customers,
         db.sales,
-        db.saleItems
+        db.saleItems,
+        db.debts,
+        db.expenses
       ], async () => {
         // 1. Categories
         if (changes.categories) {
@@ -154,6 +156,28 @@ class SyncService {
               await db.saleItems.delete(item.id);
             } else {
               await db.saleItems.put(item);
+            }
+          }
+        }
+
+        // 7. Debts
+        if (changes.debts) {
+          for (const item of changes.debts) {
+            if (item.deleted) {
+              await db.debts.delete(item.id);
+            } else {
+              await db.debts.put(item);
+            }
+          }
+        }
+
+        // 8. Expenses
+        if (changes.expenses) {
+          for (const item of changes.expenses) {
+            if (item.deleted) {
+              await db.expenses.delete(item.id);
+            } else {
+              await db.expenses.put(item);
             }
           }
         }
@@ -255,7 +279,7 @@ class SyncService {
    * Optimistically record a mutation locally and queue it in the outbox.
    */
   async registerMutation(
-    table: 'categories' | 'products' | 'stockBatches' | 'productInventories' | 'customers' | 'sales' | 'saleItems',
+    table: 'categories' | 'products' | 'stockBatches' | 'productInventories' | 'customers' | 'sales' | 'saleItems' | 'debts' | 'expenses',
     action: 'create' | 'update' | 'delete',
     recordId: string,
     payload: any
@@ -271,7 +295,9 @@ class SyncService {
       productInventories: 'product_inventories',
       customers: 'customers',
       sales: 'sales',
-      saleItems: 'sale_items'
+      saleItems: 'sale_items',
+      debts: 'debts',
+      expenses: 'expenses'
     };
 
     // Update Dexie database instance

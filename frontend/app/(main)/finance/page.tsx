@@ -7,14 +7,7 @@ import { useGetInventoryStats } from "@/lib/hooks/product.hook";
 import Loader from "@/components/Loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNaira } from "@/lib/utils";
-import {
-  TrendingUp,
-  CreditCard,
-  Wallet,
-  Activity,
-  Receipt,
-  PieChart,
-} from "lucide-react";
+import { TrendingUp, CreditCard, Wallet, PieChart } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -72,7 +65,6 @@ export default function FinanceClient() {
     };
   }, [sales]);
 
-  // Mock data for the chart, ideally this should be aggregated by date from the backend
   const chartData = useMemo(() => {
     return [
       { name: "Cash", amount: financeStats.paymentMethods.cash },
@@ -80,6 +72,8 @@ export default function FinanceClient() {
       { name: "Transfer", amount: financeStats.paymentMethods.bank_transfer },
     ];
   }, [financeStats]);
+
+  if (isLoading || isInvLoading) return <Loader />;
 
   if (isError)
     return (
@@ -91,7 +85,7 @@ export default function FinanceClient() {
   return (
     <div className="space-y-6 relative">
       <Header
-        title="Finance Details"
+        title="Finance"
         subtitle="Overview of store revenue, taxes, and payment methods"
         stats={[
           {

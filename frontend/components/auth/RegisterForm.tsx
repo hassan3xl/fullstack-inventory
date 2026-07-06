@@ -5,12 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Key, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { apiService, getBackendErrorMessage } from "@/lib/services/apiService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { handleLogin } from "@/lib/actions/auth.actions";
 import GoogleSignInButton from "./GoogleSignInButton";
+import { motion, AnimatePresence } from "framer-motion";
 
 type FormValues = {
   email: string;
@@ -19,14 +19,16 @@ type FormValues = {
   otp: string;
 };
 
+type Step = "email" | "otp" | "password";
+
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<"form" | "otp">("form");
+  const [step, setStep] = useState<Step>("email");
   const [otpSentEmail, setOtpSentEmail] = useState("");
+  const [verifiedOtp, setVerifiedOtp] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const [isOnline, setIsOnline] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -70,7 +72,7 @@ export default function RegisterForm() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const onSendOTP = async (data: FormValues) => {
+  const handleSendOTP = async (data: FormValues) => {
     if (!isOnline) {
       toast.error("Offline", {
         description: "You must be online to create an account.",
@@ -112,10 +114,10 @@ export default function RegisterForm() {
     }
   };
 
-  const onRegister = async (data: FormValues) => {
+  const handleVerifyOTP = async (data: FormValues) => {
     if (!isOnline) {
       toast.error("Offline", {
-        description: "You must be online to complete registration.",
+        description: "You must be online to verify the code.",
       });
       return;
     }
@@ -131,11 +133,45 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
+      // Verify OTP code
+      await apiService.postWithoutToken("/auth/otp/verify/", {
+        email: otpSentEmail,
+        otp: fullOtp,
+      });
+
+      toast.success("Verification code verified!", {
+        description: "Please choose a secure password to complete your account setup.",
+      });
+      setVerifiedOtp(fullOtp);
+      setStep("password");
+    } catch (error: any) {
+      console.error("Verify OTP error:", error);
+      const errorMessage = getBackendErrorMessage(error);
+      setError("otp", {
+        type: "manual",
+        message: errorMessage || "Invalid or expired verification code.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (data: FormValues) => {
+    if (!isOnline) {
+      toast.error("Offline", {
+        description: "You must be online to complete registration.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
       const res = await apiService.postWithoutToken("/auth/register/", {
-        email: data.email,
+        email: otpSentEmail,
         password1: data.password1,
         password2: data.password2,
-        otp: fullOtp,
+        otp: verifiedOtp,
       });
 
       if (res.access) {
@@ -150,9 +186,9 @@ export default function RegisterForm() {
           description: "Setting up your onboarding...",
         });
 
-        // Redirect to onboarding page after successful signup
+        // Redirect to profile setup page after successful signup
         setTimeout(() => {
-          window.location.href = "/onboarding";
+          window.location.href = "/profile-setup";
         }, 1500);
       } else {
         toast.error("Sign up failed", {
@@ -163,19 +199,21 @@ export default function RegisterForm() {
     } catch (error: any) {
       console.error("Sign up error:", error);
       const errorMessage = getBackendErrorMessage(error);
-
-      if (errorMessage.toLowerCase().includes("code") || errorMessage.toLowerCase().includes("otp")) {
-        setError("otp", {
-          type: "manual",
-          message: errorMessage || "Invalid or expired verification code.",
-        });
-      } else {
-        toast.error("Sign up error", {
-          description: errorMessage,
-        });
-      }
+      toast.error("Sign up error", {
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onSubmit = async (data: FormValues) => {
+    if (step === "email") {
+      await handleSendOTP(data);
+    } else if (step === "otp") {
+      await handleVerifyOTP(data);
+    } else if (step === "password") {
+      await handleRegister(data);
     }
   };
 
@@ -232,7 +270,7 @@ export default function RegisterForm() {
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pasteData = e.clipboardData.getData("text").trim();
-    // Extract only digits from the pasted text (in case of spaces, hyphens, or extra formatting)
+    // Extract only digits from the pasted text
     const digitsOnly = pasteData.replace(/\D/g, "");
     
     if (digitsOnly.length === 0) return;
@@ -245,263 +283,339 @@ export default function RegisterForm() {
     }
     setOtpDigits(newDigits);
 
-    // Focus the appropriate input box based on length (maximum 5 for index 0-5)
+    // Focus the appropriate input box based on length
     const focusIndex = Math.min(digitsOnly.length, 5);
     const targetInput = document.getElementById(`otp-box-${focusIndex}`);
     targetInput?.focus();
   };
 
-  if (step === "otp") {
-    return (
-      <div className="w-full max-w-lg p-8 rounded-lg shadow-lg border border-border bg-card">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Verify Email</h1>
-          <p className="text-muted-foreground text-sm">
-            We sent a 6-digit code to <span className="font-semibold text-foreground">{otpSentEmail}</span>
-          </p>
-        </div>
+  const handleSuccessGoogleLogin = async (response: any) => {
+    try {
+      await handleLogin(
+        response.user,
+        response.access,
+        response.user?.roles ?? null,
+      );
 
-        {/* OTP Form */}
-        <form onSubmit={handleSubmit(onRegister)} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium block text-center mb-4">
-              Enter Verification Code
-            </label>
-            
-            {/* Hidden field for validation synchronization */}
-            <input 
-              type="hidden" 
-              {...register("otp", { 
-                required: "Verification code is required",
-                minLength: { value: 6, message: "Code must be exactly 6 digits" }
-              })} 
-            />
+      if (typeof window !== "undefined") {
+        document.cookie = `session_access_token=${encodeURIComponent(response.access)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        document.cookie = `session_user=${encodeURIComponent(JSON.stringify(response.user))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      }
 
-            {/* Individual OTP digit boxes */}
-            <div className="flex justify-center gap-2 sm:gap-3 py-2">
-              {otpDigits.map((digit, index) => (
-                <input
-                  key={index}
-                  id={`otp-box-${index}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={1}
-                  autoComplete="one-time-code"
-                  value={digit}
-                  disabled={isLoading}
-                  onChange={(e) => handleOtpChange(e.target.value, index)}
-                  onKeyDown={(e) => handleOtpKeyDown(e, index)}
-                  onPaste={handleOtpPaste}
-                  className="w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-bold rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:border-primary transition-all font-mono"
-                />
-              ))}
-            </div>
+      toast.success("Login successful!", {
+        description: "Welcome!",
+      });
 
-            {errors.otp && (
-              <p className="text-sm text-destructive text-center mt-2 font-medium">
-                {errors.otp.message}
-              </p>
-            )}
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full mt-4"
-            disabled={isLoading || !isOnline}
-            id="otp-verify-button"
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                Verifying...
-              </div>
-            ) : (
-              "Verify & Register"
-            )}
-          </Button>
-
-          <div className="flex justify-between items-center text-sm pt-2">
-            <button
-              type="button"
-              onClick={() => setStep("form")}
-              disabled={isLoading}
-              className="text-muted-foreground hover:text-foreground transition-colors text-xs"
-            >
-              &larr; Back to registration
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResend}
-              disabled={isLoading || resendTimer > 0}
-              className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline transition-colors text-xs font-medium"
-            >
-              {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend code"}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
+      setTimeout(() => {
+        const tenants = response.available_tenants || [];
+        if (tenants.length === 0 && response.user?.role !== "platform_admin") {
+          window.location.href = "/onboarding";
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }, 1000);
+    } catch (err: any) {
+      toast.error("Google Sign-In failed", {
+        description: getBackendErrorMessage(err) || "An error occurred during Google sign-in.",
+      });
+    }
+  };
 
   return (
-    <div className="w-full max-w-lg p-8 rounded-lg shadow-lg border border-border bg-card">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-        <p className="text-muted-foreground text-sm">Join us today and get started</p>
-      </div>
-
-      {/* Offline Alert Banner */}
-      {!isOnline && (
-        <div className="p-4 mb-6 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex flex-col gap-1">
-          <span className="font-semibold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-            Sign Up Unavailable Offline
-          </span>
-          <span>Creating an account is only available online. Please check your internet connection to continue.</span>
-        </div>
-      )}
-
-      {/* Sign Up Form */}
-      <form onSubmit={handleSubmit(onSendOTP)} className="space-y-6">
-        {/* Email Field */}
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email Address
-          </label>
-          <Input
-            name="email"
-            icon={Mail}
-            register={register}
-            type="email"
-            placeholder="you@example.com"
-            disabled={isLoading || !isOnline}
-            error={errors.email}
-            validation={{
-              required: "Email is required",
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: "Invalid email address",
-              },
-            }}
-            className="w-full"
-          />
-        </div>
-
-        {/* Password Field */}
-        <div className="space-y-4">
-          <div className="relative">
-            <Input
-              label="Password"
-              name="password1"
-              icon={Key}
-              register={register}
-              type="password"
-              placeholder="At least 6 characters"
-              disabled={isLoading || !isOnline}
-              error={errors.password1}
-              validation={{
-                required: "Password is required",
-                minLength: {
-                  value: 6,
-                  message: "Password must be at least 6 characters",
-                },
-              }}
-              className="w-full"
-            />
-          </div>
-          <div className="relative">
-            <Input
-              label="Confirm Password"
-              name="password2"
-              icon={Key}
-              register={register}
-              type="password"
-              placeholder="At least 6 characters"
-              disabled={isLoading || !isOnline}
-              error={errors.password2}
-              validation={{
-                required: "Confirm password is required",
-                validate: (val: string) => {
-                  if (watch("password1") !== val) {
-                    return "Passwords do not match";
-                  }
-                },
-              }}
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        {/* Terms and Conditions */}
-        <div className="text-xs text-muted-foreground">
-          By creating an account, you agree to our{" "}
-          <Link
-            href="/terms"
-            title="Terms"
-            className="text-primary hover:underline"
-            id="terms-link"
-          >
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link
-            href="/privacy"
-            title="Privacy"
-            className="text-primary hover:underline"
-            id="privacy-link"
-          >
-            Privacy Policy
-          </Link>
-        </div>
-
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={isLoading || !isOnline}
-          id="register-submit-button"
+    <div className="w-full max-w-lg p-8 rounded-lg shadow-lg border border-border bg-card overflow-hidden">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 15 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -15 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
         >
-          {isLoading ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-              Sending Verification...
+          {/* Header */}
+          <div className="text-center mb-8">
+            {step === "email" && (
+              <>
+                <h1 className="text-3xl font-bold mb-2">Create Account</h1>
+                <p className="text-muted-foreground text-sm">Join us today and get started</p>
+              </>
+            )}
+            {step === "otp" && (
+              <>
+                <h1 className="text-3xl font-bold mb-2">Verify Email</h1>
+                <p className="text-muted-foreground text-sm">
+                  We sent a 6-digit code to <span className="font-semibold text-foreground">{otpSentEmail}</span>
+                </p>
+              </>
+            )}
+            {step === "password" && (
+              <>
+                <h1 className="text-3xl font-bold mb-2">Set Password</h1>
+                <p className="text-muted-foreground text-sm">Choose a secure password for your account</p>
+              </>
+            )}
+          </div>
+
+          {/* Offline Alert Banner */}
+          {!isOnline && (
+            <div className="p-4 mb-6 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex flex-col gap-1">
+              <span className="font-semibold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Sign Up Unavailable Offline
+              </span>
+              <span>Creating an account is only available online. Please check your internet connection to continue.</span>
             </div>
-          ) : (
-            "Create Account"
           )}
-        </Button>
-      </form>
 
-      {/* Divider */}
-      <div className="my-6 flex items-center">
-        <div className="flex-1 border-t border-border" />
-        <span className="px-3 text-sm text-muted-foreground">or</span>
-        <div className="flex-1 border-t border-border" />
-      </div>
+          {/* Sign Up Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Step 1: Email Field */}
+            {step === "email" && (
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">
+                  Email Address
+                </label>
+                <Input
+                  name="email"
+                  icon={Mail}
+                  register={register}
+                  type="email"
+                  placeholder="you@example.com"
+                  disabled={isLoading || !isOnline}
+                  error={errors.email}
+                  validation={{
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Invalid email address",
+                    },
+                  }}
+                  className="w-full"
+                />
+              </div>
+            )}
 
-      {/* Google Sign Up Button */}
-      <div className="mb-6">
-        <GoogleSignInButton isLoading={isLoading} setIsLoading={setIsLoading} text="Sign up with Google" disabled={!isOnline} />
-      </div>
+            {/* Step 2: OTP Field */}
+            {step === "otp" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium block text-center mb-4">
+                  Enter Verification Code
+                </label>
+                
+                {/* Hidden field for validation synchronization */}
+                <input 
+                  type="hidden" 
+                  {...register("otp", { 
+                    required: "Verification code is required",
+                    minLength: { value: 6, message: "Code must be exactly 6 digits" }
+                  })} 
+                />
 
-      {/* Sign In Link */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            title="Sign In"
-            className="text-primary font-medium hover:underline"
-            id="login-link"
-          >
-            Sign in
-          </Link>
-        </p>
-      </div>
+                {/* Individual OTP digit boxes */}
+                <div className="flex justify-center gap-2 sm:gap-3 py-2">
+                  {otpDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      id={`otp-box-${index}`}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={1}
+                      autoComplete="one-time-code"
+                      value={digit}
+                      disabled={isLoading}
+                      onChange={(e) => handleOtpChange(e.target.value, index)}
+                      onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                      onPaste={handleOtpPaste}
+                      className="w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-bold rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:border-primary transition-all font-mono"
+                    />
+                  ))}
+                </div>
+
+                {errors.otp && (
+                  <p className="text-sm text-destructive text-center mt-2 font-medium">
+                    {errors.otp.message}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Password Fields */}
+            {step === "password" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email Address
+                  </label>
+                  <div className="flex rounded-md border border-border px-3 py-2 cursor-not-allowed bg-muted/30 items-center gap-3">
+                    <Mail size={18} className="text-muted-foreground" />
+                    <div className="font-medium text-muted-foreground">{otpSentEmail}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Input
+                      label="Password"
+                      name="password1"
+                      icon={Key}
+                      register={register}
+                      type="password"
+                      placeholder="At least 6 characters"
+                      disabled={isLoading || !isOnline}
+                      error={errors.password1}
+                      validation={{
+                        required: "Password is required",
+                        minLength: {
+                          value: 6,
+                          message: "Password must be at least 6 characters",
+                        },
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Input
+                      label="Confirm Password"
+                      name="password2"
+                      icon={Key}
+                      register={register}
+                      type="password"
+                      placeholder="At least 6 characters"
+                      disabled={isLoading || !isOnline}
+                      error={errors.password2}
+                      validation={{
+                        required: "Confirm password is required",
+                        validate: (val: string) => {
+                          if (watch("password1") !== val) {
+                            return "Passwords do not match";
+                          }
+                        },
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || !isOnline}
+              id="register-submit-button"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  {step === "email" ? "Sending Verification..." : step === "otp" ? "Verifying..." : "Creating Account..."}
+                </div>
+              ) : step === "email" ? (
+                "Send Verification Code"
+              ) : step === "otp" ? (
+                "Verify Code"
+              ) : (
+                "Complete Registration"
+              )}
+            </Button>
+
+            {/* Footer Navigation & Extra Buttons */}
+            {step === "email" && (
+              <>
+                {/* Terms and Conditions */}
+                <div className="text-xs text-muted-foreground">
+                  By creating an account, you agree to our{" "}
+                  <Link
+                    href="/terms"
+                    title="Terms"
+                    className="text-primary hover:underline"
+                    id="terms-link"
+                  >
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    href="/privacy"
+                    title="Privacy"
+                    className="text-primary hover:underline"
+                    id="privacy-link"
+                  >
+                    Privacy Policy
+                  </Link>
+                </div>
+
+                {/* Divider */}
+                <div className="my-6 flex items-center">
+                  <div className="flex-1 border-t border-border" />
+                  <span className="px-3 text-sm text-muted-foreground">or</span>
+                  <div className="flex-1 border-t border-border" />
+                </div>
+
+                {/* Google Sign Up Button */}
+                <div className="mb-6">
+                  <GoogleSignInButton
+                    isLoading={isLoading}
+                    setIsLoading={setIsLoading}
+                    text="Sign up with Google"
+                    disabled={!isOnline}
+                    onSuccess={handleSuccessGoogleLogin}
+                  />
+                </div>
+
+                {/* Sign In Link */}
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Already have an account?{" "}
+                    <Link
+                      href="/login"
+                      title="Sign In"
+                      className="text-primary font-medium hover:underline"
+                      id="login-link"
+                    >
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </>
+            )}
+
+            {step === "otp" && (
+              <div className="flex justify-between items-center text-sm pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep("email")}
+                  disabled={isLoading}
+                  className="text-muted-foreground hover:text-foreground transition-colors text-xs"
+                >
+                  &larr; Back to email
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={isLoading || resendTimer > 0}
+                  className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline transition-colors text-xs font-medium"
+                >
+                  {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend code"}
+                </button>
+              </div>
+            )}
+
+            {step === "password" && (
+              <div className="flex items-center text-sm pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep("otp")}
+                  disabled={isLoading}
+                  className="text-muted-foreground hover:text-foreground transition-colors text-xs"
+                >
+                  &larr; Back to verification code
+                </button>
+              </div>
+            )}
+          </form>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

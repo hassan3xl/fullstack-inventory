@@ -4,11 +4,12 @@ import React, { useState } from "react";
 import CategoryList from "@/components/products/CategoryList";
 import { useGetProductsCategories } from "@/lib/hooks/product.hook";
 import { Category } from "@/lib/types/product.types";
-import { Plus } from "lucide-react";
+import { Plus, Wifi } from "lucide-react";
 import CategoryForm from "@/components/forms/CategoryForm";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/Loader";
+import { useAuth } from "@/contexts/AuthContext";
 
 const CategoriesInventoryClient: React.FC = () => {
   const { data: categories, isLoading, error } = useGetProductsCategories();
@@ -23,6 +24,8 @@ const CategoriesInventoryClient: React.FC = () => {
     return <Loading />;
   }
 
+  const { isOnline } = useAuth();
+  console.log("online", isOnline);
   return (
     <section className="relative min-h-[60vh]">
       {error && !categories && (
@@ -53,14 +56,25 @@ const CategoriesInventoryClient: React.FC = () => {
           <p className="text-xs text-muted-foreground/80 mt-1 mb-4">
             Create your first product category to start listing products.
           </p>
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            variant="outline"
-            className="rounded-lg"
-          >
-            <Plus size={16} className="mr-1.5" />
-            Create Category
-          </Button>
+          {isOnline === true ? (
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              variant="outline"
+              className={`rounded-lg font-bold flex items-center gap-1.5 shadow-md shadow-primary/10 transition-transform active:scale-95 duration-100`}
+            >
+              <Plus size={16} className="mr-1.5" />
+              Create Category
+            </Button>
+          ) : (
+            <Button
+              disabled
+              variant="outline"
+              className={`rounded-lg font-bold flex items-center gap-1.5 shadow-md shadow-primary/10 transition-transform active:scale-95 duration-100`}
+            >
+              <Wifi size={16} className="mr-1.5" />
+              Connect to Internet to Create Category
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">

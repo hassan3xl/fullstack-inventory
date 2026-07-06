@@ -9,6 +9,7 @@ from utils.tenant_context import get_current_tenant
 
 from apps.products.models import Category, Product, StockBatch, ProductInventory
 from apps.sales.models import Customer, Sale, SaleItem
+from apps.finance.models import Debt, Expense
 
 from .serializers import (
     SyncCategorySerializer,
@@ -17,7 +18,9 @@ from .serializers import (
     SyncProductInventorySerializer,
     SyncCustomerSerializer,
     SyncSaleSerializer,
-    SyncSaleItemSerializer
+    SyncSaleItemSerializer,
+    SyncDebtSerializer,
+    SyncExpenseSerializer
 )
 
 class SyncPullView(APIView):
@@ -53,6 +56,8 @@ class SyncPullView(APIView):
         customers = Customer.plain_objects.filter(tenant=tenant)
         sales = Sale.plain_objects.filter(tenant=tenant)
         sale_items = SaleItem.plain_objects.filter(tenant=tenant)
+        debts = Debt.plain_objects.filter(tenant=tenant)
+        expenses = Expense.plain_objects.filter(tenant=tenant)
 
         # Filter by last_pulled_at if present
         if last_pulled_at:
@@ -64,6 +69,8 @@ class SyncPullView(APIView):
             sales = sales.filter(updated_at__gt=last_pulled_at)
             # Filter sale_items by their parent sale's updated_at
             sale_items = sale_items.filter(sale__updated_at__gt=last_pulled_at)
+            debts = debts.filter(updated_at__gt=last_pulled_at)
+            expenses = expenses.filter(updated_at__gt=last_pulled_at)
 
         return Response({
             "changes": {
@@ -74,6 +81,8 @@ class SyncPullView(APIView):
                 "customers": SyncCustomerSerializer(customers, many=True).data,
                 "sales": SyncSaleSerializer(sales, many=True).data,
                 "sale_items": SyncSaleItemSerializer(sale_items, many=True).data,
+                "debts": SyncDebtSerializer(debts, many=True).data,
+                "expenses": SyncExpenseSerializer(expenses, many=True).data,
             },
             "server_timestamp": server_timestamp
         }, status=status.HTTP_200_OK)
@@ -138,6 +147,12 @@ class SyncPushView(APIView):
                 elif table == 'sale_items':
                     model = SaleItem
                     serializer_class = SyncSaleItemSerializer
+                elif table == 'debts':
+                    model = Debt
+                    serializer_class = SyncDebtSerializer
+                elif table == 'expenses':
+                    model = Expense
+                    serializer_class = SyncExpenseSerializer
                 else:
                     errors.append({"record_id": record_id, "error": f"Unsupported table: {table}"})
                     continue

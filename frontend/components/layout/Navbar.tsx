@@ -58,7 +58,7 @@ export function Navbar() {
                       fill
                       className="object-cover"
                       unoptimized
-                      />
+                    />
                   </div>
                 ) : (
                   <Package className="text-primary h-7 w-7" />
@@ -78,29 +78,34 @@ export function Navbar() {
                 {isSyncing ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-xs animate-pulse">
                     <Loader2 size={12} className="animate-spin" />
-                    <span>Syncing</span>
+                    <span className="hidden sm:block">Syncing</span>
                   </div>
                 ) : !isOnline ? (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-xs">
                     <WifiOff size={12} />
-                    <span>Offline</span>
+                    <span className="hidden sm:block">Offline</span>
                   </div>
                 ) : (
                   <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-xs">
                     <Wifi size={12} />
-                    <span>Online</span>
+                    <span className="hidden sm:block">Online</span>
                   </div>
                 )}
               </div>
               <CartButton />
-              <NotificationButton onClick={() => setIsNotificationsOpen(true)} />
+              <NotificationButton
+                onClick={() => setIsNotificationsOpen(true)}
+              />
               <div className="h-6 w-px bg-border mx-1" />
               <AccountDropdown />
             </div>
           </div>
         </div>
       </nav>
-      <NotificationPanel isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
+      <NotificationPanel
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
     </>
   );
 }

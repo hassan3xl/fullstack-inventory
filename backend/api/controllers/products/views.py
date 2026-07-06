@@ -186,12 +186,30 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsTenantAdmin()]
+        if self.action in ['toggle_active']:
+            return [IsAuthenticated(), IsTenantManager()]
         return [IsAuthenticated(), HasTenantAccess()]
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return ProductCreateSerializer
         return ProductSerializer
+
+    @action(detail=True, methods=['post'], url_path='toggle-active')
+    def toggle_active(self, request, pk=None):
+        product = self.get_object()
+        product.is_active = not product.is_active
+        product.save()
+        
+        from apps.notifications.triggers import NotificationTriggers
+        user_name = self.request.user.email.split('@')[0]
+        NotificationTriggers.on_product_updated(self.request.tenant, product.name, user_name)
+        
+        return Response({
+            'status': 'success',
+            'is_active': product.is_active,
+            'message': f"Product '{product.name}' is now {'active' if product.is_active else 'inactive'}."
+        }, status=status.HTTP_200_OK)
 
     def perform_create(self, serializer):
         tenant = self.request.tenant

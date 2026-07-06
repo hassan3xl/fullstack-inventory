@@ -21,4 +21,8 @@ export const QUERY_KEYS = {
   // Notifications
   NOTIFICATIONS: ["notifications"],
   NOTIFICATION_STATS: ["notification_stats"],
+
+  // Finance
+  DEBTS: ["debts"],
+  EXPENSES: ["expenses"],
 } as const;
