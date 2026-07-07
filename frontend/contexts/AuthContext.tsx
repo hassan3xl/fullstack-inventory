@@ -114,6 +114,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     document.cookie = "session_access_token=; max-age=0; path=/;";
     document.cookie = "active_tenant_id=; max-age=0; path=/;";
 
+    // Clear client-side cart session
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("qstack_cart");
+    }
+
     // Clear server-side cookies
     await resetAuthCookies();
     setUser(null);
