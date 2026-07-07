@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type CartItem = {
   id: string;
@@ -37,6 +38,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const { user, loading } = useAuth();
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -49,6 +51,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Failed to load cart from localStorage", e);
     }
   }, []);
+
+  // Clear cart state if user becomes null after auth initialization
+  useEffect(() => {
+    if (!loading && !user) {
+      setCart([]);
+    }
+  }, [user, loading]);
 
   // Save cart to localStorage on changes
   useEffect(() => {

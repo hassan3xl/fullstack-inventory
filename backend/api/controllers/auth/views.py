@@ -29,14 +29,27 @@ def send_otp_email(email, code):
     </div>
     """
     
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        html_message=html_message,
-        fail_silently=False
-    )
+    # Check if SMTP email backend is active (e.g. in production).
+    # If active, send email via Resend's HTTP API instead of SMTP to avoid socket blocking issues on cloud providers (like Render).
+    # For console/testing backends (local development/tests), use standard send_mail to prevent live API requests.
+    if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+        from utils.resend import EmailSender, EmailType
+        EmailSender.send(
+            to=email,
+            subject=subject,
+            html=html_message,
+            email_type=EmailType.CUSTOM
+        )
+    else:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            html_message=html_message,
+            fail_silently=False
+        )
+
 
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client

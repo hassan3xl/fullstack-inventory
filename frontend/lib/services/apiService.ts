@@ -86,6 +86,7 @@ async function fetchWithCatch(
           // Clear client-side cookies
           document.cookie = "session_user=; max-age=0; path=/;";
           document.cookie = "session_access_token=; max-age=0; path=/;";
+          localStorage.removeItem("qstack_cart");
 
           // Reset server cookies
           resetAuthCookies().catch((err) => {
